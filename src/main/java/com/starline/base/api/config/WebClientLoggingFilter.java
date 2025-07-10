@@ -67,6 +67,7 @@ public class WebClientLoggingFilter {
                     .map(ApiResponse::getFieldErrors)
                     .orElse(new ArrayList<>());
         }
+
     }
 
     private static Mono<ClientResponse> logSuccess(ClientResponse response) {

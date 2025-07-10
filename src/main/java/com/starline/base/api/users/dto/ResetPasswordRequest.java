@@ -1,10 +1,12 @@
 package com.starline.base.api.users.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import lombok.Builder;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
 
 @Data
+@Builder
 public class ResetPasswordRequest {
 
     @NotBlank(message = "Please Provide Valid Phone Number")
@@ -23,4 +25,6 @@ public class ResetPasswordRequest {
 
     @NotBlank(message = "Please Provide Valid Confirm Password")
     private String confirmNewPassword;
+
+
 }

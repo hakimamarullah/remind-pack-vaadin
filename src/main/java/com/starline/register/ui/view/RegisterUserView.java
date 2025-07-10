@@ -5,6 +5,7 @@ import com.starline.base.api.dto.ApiResponse;
 import com.starline.base.api.users.OTPService;
 import com.starline.base.api.users.RegistrationService;
 import com.starline.base.api.users.dto.RegisterUserRequest;
+import com.starline.base.ui.component.CountDownTask;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -34,10 +35,7 @@ import lombok.Data;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.Objects;
 
 @PageTitle("Register")
 @AnonymousAllowed
@@ -49,7 +47,6 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
     private final TextField phoneField = new TextField("Mobile Phone");
     private final PasswordField passwordField = new PasswordField("Password");
     private final PasswordField confirmPasswordField = new PasswordField("Confirm Password");
-    private final Button backToLoginBtn = new Button("Back to Login");
     private final TextField otpField = new TextField("OTP");
 
     private final Button sendOtpBtn = new Button("Send OTP");
@@ -58,9 +55,8 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
     private final Binder<UserRegistration> binder = new Binder<>();
     private final transient UserRegistration userRegistration = new UserRegistration();
 
-    private int countdown = 30;
-    private final transient ScheduledExecutorService scheduler;
-    private transient ScheduledFuture<?> countdownTask;
+
+    private final transient CountDownTask countDownTask;
     private final transient AuthenticationContext authenticationContext;
 
 
@@ -96,6 +92,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
         registerBtn.getStyle().set("cursor", "pointer");
 
         // Back to login button
+        Button backToLoginBtn = new Button("Back to Login");
         backToLoginBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
         backToLoginBtn.addClickListener(e -> getUI().ifPresent(ui -> ui.access(() ->
                 ui.navigate("/login")
@@ -136,15 +133,12 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
         otpField.setValueChangeMode(ValueChangeMode.EAGER);
 
         // Actions
-        sendOtpBtn.addClickListener(e -> {
-            handleSendOTP();
-        });
+        sendOtpBtn.addClickListener(e -> handleSendOTP());
 
         registerBtn.setEnabled(false);
         registerBtn.addClickListener(e -> handleRegister());
 
-        // Initialize scheduler
-        scheduler = Executors.newSingleThreadScheduledExecutor();
+        countDownTask = new CountDownTask(30);
     }
 
     private void handleSendOTP() {
@@ -154,7 +148,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
         }
 
         otpService.sendOTPAsync(phoneField.getValue());
-        Notification.show( String.format("OTP will be sent to Whatsapp: %s", phoneField.getValue()), 3000, Notification.Position.TOP_CENTER)
+        Notification.show(String.format("OTP will be sent to Whatsapp: %s", phoneField.getValue()), 3000, Notification.Position.TOP_CENTER)
                 .addThemeVariants(NotificationVariant.LUMO_CONTRAST);
         sendOtpBtn.setEnabled(false);
         startResendCountdown();
@@ -259,9 +253,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
                 String mappedFieldName = mapApiFieldToFormField(fieldName);
 
                 // Show the error directly on the field
-                getUI().ifPresent(ui -> ui.access(() -> {
-                    showFieldError(mappedFieldName, errorMessage);
-                }));
+                getUI().ifPresent(ui -> ui.access(() -> showFieldError(mappedFieldName, errorMessage)));
 
             });
 
@@ -286,16 +278,16 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
 
     private void clearFieldErrors() {
         // Clear error states from all form fields
-       getUI().ifPresent(ui -> ui.access(() -> {
-           phoneField.setInvalid(false);
-           phoneField.setErrorMessage(null);
-           passwordField.setInvalid(false);
-           passwordField.setErrorMessage(null);
-           confirmPasswordField.setInvalid(false);
-           confirmPasswordField.setErrorMessage(null);
-           otpField.setInvalid(false);
-           otpField.setErrorMessage(null);
-       }));
+        getUI().ifPresent(ui -> ui.access(() -> {
+            phoneField.setInvalid(false);
+            phoneField.setErrorMessage(null);
+            passwordField.setInvalid(false);
+            passwordField.setErrorMessage(null);
+            confirmPasswordField.setInvalid(false);
+            confirmPasswordField.setErrorMessage(null);
+            otpField.setInvalid(false);
+            otpField.setErrorMessage(null);
+        }));
     }
 
     private void showFieldError(String fieldName, String errorMessage) {
@@ -333,37 +325,25 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
     }
 
     private void startResendCountdown() {
-        countdown = 30;
-
-        // Cancel existing task if running
-        if (countdownTask != null && !countdownTask.isCancelled()) {
-            countdownTask.cancel(true);
-        }
-
-        countdownTask = scheduler.scheduleAtFixedRate(() -> getUI().ifPresent(ui -> ui.access(() -> {
-            if (countdown <= 0) {
-                sendOtpBtn.setText("Resend OTP");
-                sendOtpBtn.setEnabled(true);
-                if (countdownTask != null) {
-                    countdownTask.cancel(true);
+        countDownTask.startCountdown(
+                getUI().orElse(null),
+                () -> {
+                    sendOtpBtn.setText("Resend OTP");
+                    sendOtpBtn.setEnabled(true);
+                },
+                counter -> {
+                    sendOtpBtn.setText("Resend in " + counter + "s");
+                    sendOtpBtn.setEnabled(false);
                 }
-            } else {
-                sendOtpBtn.setText("Resend in " + countdown + "s");
-                countdown--;
-            }
-
-        })), 0, 1, TimeUnit.SECONDS);
+        );
     }
 
     @Override
     protected void onDetach(DetachEvent detachEvent) {
         super.onDetach(detachEvent);
         // Clean up scheduler when component is detached
-        if (countdownTask != null && !countdownTask.isCancelled()) {
-            countdownTask.cancel(true);
-        }
-        if (scheduler != null && !scheduler.isShutdown()) {
-            scheduler.shutdown();
+        if (!Objects.isNull(countDownTask)) {
+            countDownTask.shutdown();
         }
     }
 

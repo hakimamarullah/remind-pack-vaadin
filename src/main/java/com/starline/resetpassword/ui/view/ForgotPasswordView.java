@@ -1,9 +1,14 @@
 package com.starline.resetpassword.ui.view;
 
+import com.starline.base.api.config.WebClientLoggingFilter;
+import com.starline.base.api.dto.ApiResponse;
 import com.starline.base.api.users.OTPService;
 import com.starline.base.api.users.ResetPasswordService;
+import com.starline.base.api.users.dto.ResetPasswordRequest;
+import com.starline.base.ui.component.CountDownTask;
+import com.starline.base.ui.constant.StyleSheet;
 import com.vaadin.flow.component.DetachEvent;
-import com.vaadin.flow.component.UI;
+import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H2;
@@ -31,15 +36,16 @@ import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.security.PermitAll;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
+import java.util.Objects;
 
 @PageTitle("Forgot Password")
 @AnonymousAllowed
 @PermitAll
+@Slf4j
 public class ForgotPasswordView extends Main implements BeforeEnterObserver {
 
     private final transient ResetPasswordService passwordResetService;
@@ -52,15 +58,11 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
 
     private final Button sendOtpBtn = new Button("Send OTP");
     private final Button resetPasswordBtn = new Button("Reset Password");
-    private final Button backToLoginBtn = new Button("Back to Login");
 
+    private final transient CountDownTask countDownTask;
     private final Binder<PasswordReset> binder = new Binder<>();
     private final transient PasswordReset passwordReset = new PasswordReset();
     private final transient AuthenticationContext authenticationContext;
-
-    private int countdown = 30;
-    private final transient ScheduledExecutorService scheduler;
-    private transient ScheduledFuture<?> countdownTask;
 
 
     public ForgotPasswordView(ResetPasswordService passwordResetService, OTPService otpService, AuthenticationContext authenticationContext) {
@@ -93,7 +95,6 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
         phoneField.setPlaceholder("e.g. 62812345678");
 
 
-
         HorizontalLayout otpLayout = new HorizontalLayout(otpField);
         otpLayout.setAlignItems(FlexComponent.Alignment.BASELINE);
         otpLayout.setWidthFull();
@@ -108,12 +109,15 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
 
         // Buttons
         resetPasswordBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        resetPasswordBtn.getStyle().set("cursor", "pointer");
+        resetPasswordBtn.getStyle().set(StyleSheet.CURSOR, StyleSheet.CURSOR_POINTER);
         resetPasswordBtn.setEnabled(false);
 
 
+        Button backToLoginBtn = new Button("Back to Login");
         backToLoginBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-        backToLoginBtn.getStyle().set("cursor", "pointer");
+        backToLoginBtn.getStyle().set(StyleSheet.CURSOR, StyleSheet.CURSOR_POINTER);
+        
+        sendOtpBtn.getStyle().set(StyleSheet.CURSOR, StyleSheet.CURSOR_POINTER);
 
         // Form layout with white background
         VerticalLayout form = new VerticalLayout();
@@ -155,8 +159,14 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
                 ui.navigate("/login")
         )));
 
-        // Initialize scheduler
-        scheduler = Executors.newSingleThreadScheduledExecutor();
+
+        // Set focus
+        phoneField.addKeyDownListener(Key.ENTER, e -> e.getSource().getUI().ifPresent(ui -> ui.access(otpField::focus)));
+        otpField.addKeyDownListener(Key.ENTER, e -> e.getSource().getUI().ifPresent(ui -> ui.access(newPasswordField::focus)));
+        newPasswordField.addKeyDownListener(Key.ENTER, e -> e.getSource().getUI().ifPresent(ui -> ui.access(confirmPasswordField::focus)));
+
+        countDownTask = new CountDownTask(30);
+
     }
 
     @Override
@@ -207,20 +217,19 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
     private void handleSendOtp() {
         String phoneValue = phoneField.getValue();
 
-       if (phoneValue == null || phoneValue.trim().isEmpty()) {
-           Notification.show("Phone number is required", 3000, Notification.Position.TOP_CENTER)
-                   .addThemeVariants(NotificationVariant.LUMO_WARNING);
-           return;
-       }
+        if (phoneValue == null || phoneValue.trim().isEmpty()) {
+            Notification.show("Phone number is required", 3000, Notification.Position.TOP_CENTER)
+                    .addThemeVariants(NotificationVariant.LUMO_WARNING);
+            return;
+        }
 
         // Call service to send OTP
         otpService.sendOTPAsync(phoneValue);
 
         Notification.show("OTP will be sent to Whatsapp at " + phoneValue, 3000, Notification.Position.TOP_CENTER)
-                        .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
+                .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
         startResendCountdown();
     }
-
 
 
     private void handleResetPassword() {
@@ -231,17 +240,76 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
             String otp = passwordReset.getOtp();
             String newPassword = passwordReset.getNewPassword();
 
-            boolean success = passwordResetService.resetPassword(phone, otp, newPassword);
-            if (success) {
-                Notification.show("Password reset successful! Please login with your new password.");
-                UI.getCurrent().navigate("login");
-            } else {
-                Notification.show("Password reset failed. Please try again.");
-            }
+            ResetPasswordRequest payload = ResetPasswordRequest.builder()
+                    .phoneNumber(phone)
+                    .otp(otp)
+                    .newPassword(newPassword)
+                    .confirmNewPassword(newPassword)
+                    .build();
+            passwordResetService.resetPassword(payload)
+                    .subscribe(this::handleResetPasswordResponse, this::handleResetPasswordError);
+
         } catch (ValidationException e) {
             Notification.show("Please fix the validation errors", 3000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_WARNING);
         }
+    }
+
+    private void handleResetPasswordResponse(ApiResponse<String> response) {
+        getUI().ifPresent(ui -> ui.access(() -> {
+            Notification.show(response.getMessage(), 3000, Notification.Position.TOP_CENTER)
+                    .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            ui.navigate("/login");
+        }));
+    }
+
+    private void handleResetPasswordError(Throwable ex) {
+        WebClientLoggingFilter.ApiClientException exception = (WebClientLoggingFilter.ApiClientException) ex;
+        if (HttpStatus.BAD_REQUEST.value() == exception.getHttpStatusCode()) {
+            getUI().ifPresent(ui -> ui.access(() -> handleFieldErrors(exception.getFieldErrors())));
+            return;
+        }
+        throw exception;
+    }
+
+    private void handleFieldErrors(List<ApiResponse.FieldError> fieldErrors) {
+        if (!fieldErrors.isEmpty()) {
+            clearFieldErrors();
+        }
+        fieldErrors.forEach(it -> {
+            switch (it.getName()) {
+                case "phoneNumber":
+                    phoneField.setErrorMessage(it.getMessage());
+                    phoneField.setInvalid(true);
+                    break;
+                case "otp":
+                    otpField.setErrorMessage(it.getMessage());
+                    otpField.setInvalid(true);
+                    break;
+                case "newPassword":
+                    newPasswordField.setErrorMessage(it.getMessage());
+                    newPasswordField.setInvalid(true);
+                    break;
+                case "confirmNewPassword":
+                    confirmPasswordField.setErrorMessage(it.getMessage());
+                    confirmPasswordField.setInvalid(true);
+                    break;
+                default:
+                    log.warn("Unknown field error: {}", it.getName());
+                    break;
+            }
+        });
+    }
+
+    private void clearFieldErrors() {
+        phoneField.setErrorMessage(null);
+        phoneField.setInvalid(false);
+        otpField.setErrorMessage(null);
+        otpField.setInvalid(false);
+        newPasswordField.setErrorMessage(null);
+        newPasswordField.setInvalid(false);
+        confirmPasswordField.setErrorMessage(null);
+        confirmPasswordField.setInvalid(false);
     }
 
     private void validateAndUpdateResetButton() {
@@ -263,38 +331,25 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
     }
 
     private void startResendCountdown() {
-        countdown = 30;
-
-        // Cancel existing task if running
-        if (countdownTask != null && !countdownTask.isCancelled()) {
-            countdownTask.cancel(true);
-        }
-
-        countdownTask = scheduler.scheduleAtFixedRate(() -> {
-            getUI().ifPresent(ui -> ui.access(() -> {
-                if (countdown <= 0) {
+        countDownTask.startCountdown(
+                getUI().orElse(null),
+                () -> {
                     sendOtpBtn.setText("Resend OTP");
                     sendOtpBtn.setEnabled(true);
-                    if (countdownTask != null) {
-                        countdownTask.cancel(true);
-                    }
-                } else {
-                    sendOtpBtn.setText("Resend in " + countdown + "s");
-                    countdown--;
+                },
+                counter -> {
+                    sendOtpBtn.setText("Resend in " + counter + "s");
+                    sendOtpBtn.setEnabled(false);
                 }
-            }));
-        }, 0, 1, TimeUnit.SECONDS);
+        );
+
     }
 
     @Override
     protected void onDetach(DetachEvent detachEvent) {
         super.onDetach(detachEvent);
-        // Clean up scheduler when component is detached
-        if (countdownTask != null && !countdownTask.isCancelled()) {
-            countdownTask.cancel(true);
-        }
-        if (scheduler != null && !scheduler.isShutdown()) {
-            scheduler.shutdown();
+        if (!Objects.isNull(countDownTask)) {
+            countDownTask.shutdown();
         }
     }
 
