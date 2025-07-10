@@ -1,0 +1,37 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  profiles:
+    active: prod
+  jpa:
+    hibernate:
+      ddl-auto: none
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        default_schema: user_svc
+    open-in-view: false
+  datasource:
+    url:  ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  sql:
+    init:
+      mode: never
+
+
+
+logging:
+  level:
+    org.atmosphere: warn
+
+vaadin:
+  allowed-packages: com.vaadin,org.vaadin,com.flowingcode,com.starline
+  launch-browser: true
+
+
+url:
+  svc:
+    users: http://localhost:8081

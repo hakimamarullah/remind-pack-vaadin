@@ -1,10 +1,11 @@
 package com.starline.base.ui.view;
 
 import com.starline.base.ui.component.ViewToolbar;
-
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Main;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import jakarta.annotation.security.PermitAll;
@@ -14,9 +15,9 @@ import jakarta.annotation.security.PermitAll;
  */
 @Route
 @PermitAll // When security is enabled, allow all authenticated users
-public final class MainView extends Main {
+public final class MainView extends Main implements BeforeEnterObserver {
 
-    // TODO Replace with your own main view.
+
 
     MainView() {
         addClassName(LumoUtility.Padding.MEDIUM);
@@ -29,5 +30,10 @@ public final class MainView extends Main {
      */
     public static void showMainView() {
         UI.getCurrent().navigate(MainView.class);
+    }
+
+    @Override
+    public void beforeEnter(BeforeEnterEvent beforeEnterEvent) {
+        beforeEnterEvent.forwardTo("task-list");
     }
 }
