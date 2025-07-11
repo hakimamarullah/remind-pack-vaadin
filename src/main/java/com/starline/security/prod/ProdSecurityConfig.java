@@ -1,6 +1,7 @@
 package com.starline.security.prod;
 
 
+import com.starline.base.ui.view.HomePage;
 import com.starline.register.ui.view.RegisterUserView;
 import com.starline.resetpassword.ui.view.ForgotPasswordView;
 import com.starline.security.repository.UserRepository;
@@ -64,6 +65,7 @@ public class ProdSecurityConfig {
             routeConfiguration.setRoute(ProdLoginView.LOGIN_PATH, ProdLoginView.class);
             routeConfiguration.setRoute("register", RegisterUserView.class);
             routeConfiguration.setRoute("forgot-password", ForgotPasswordView.class);
+            routeConfiguration.setRoute("/", HomePage.class);
         };
     }
 }

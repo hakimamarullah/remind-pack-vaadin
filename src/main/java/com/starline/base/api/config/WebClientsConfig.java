@@ -29,4 +29,5 @@ public class WebClientsConfig {
                                 WebClient.Builder clientBuilder) {
         return clientBuilder.baseUrl(baseUrl).build();
     }
+
 }

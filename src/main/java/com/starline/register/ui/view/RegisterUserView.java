@@ -143,7 +143,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
 
     private void handleSendOTP() {
         if (phoneField.isEmpty()) {
-            Notification.show("Phone number is required");
+            Notification.show("Phone number is required", 3000, Notification.Position.TOP_CENTER, true);
             return;
         }
 
