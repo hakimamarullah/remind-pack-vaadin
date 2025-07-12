@@ -8,10 +8,29 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./postgres:/var/lib/postgresql/data
+      - ./postgres_data:/var/lib/postgresql/data
     networks:
       - remind-pack
-
+  pg-backup:
+    image: postgres:15
+    container_name: pg-backup
+    depends_on:
+      - postgres
+    volumes:
+      - ./pg-backups:/backups
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    entrypoint: >
+      bash -c "
+        mkdir -p /backups &&
+        while true; do
+          echo '[*] Starting backup at $(date)' &&
+          pg_dumpall -h postgres -U ${POSTGRES_USER} | gzip > /backups/backup-$(date +%Y-%m-%d_%H-%M-%S).sql.gz &&
+          echo '[✓] Backup created at $(date)' &&
+          find /backups -name '*.sql.gz' -mtime +7 -delete &&
+          sleep 21600  # 6 hours in seconds
+        done
+      "
   starline-scc:
     image: hakimamarullah/starline-scc:v1.0.0
     pull_policy: always

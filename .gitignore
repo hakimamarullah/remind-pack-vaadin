@@ -17,3 +17,5 @@ vite.generated.ts
 /docker/logs/
 /docker/postgres/
 /docker/.env.local
+/docker/postgres_data/
+/docker/pg-backups/
