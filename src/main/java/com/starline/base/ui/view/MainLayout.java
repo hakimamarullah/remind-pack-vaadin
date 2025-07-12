@@ -21,7 +21,16 @@ import com.vaadin.flow.server.menu.MenuEntry;
 import com.vaadin.flow.spring.security.AuthenticationContext;
 import jakarta.annotation.security.PermitAll;
 
-import static com.vaadin.flow.theme.lumo.LumoUtility.*;
+import static com.vaadin.flow.theme.lumo.LumoUtility.AlignItems;
+import static com.vaadin.flow.theme.lumo.LumoUtility.Display;
+import static com.vaadin.flow.theme.lumo.LumoUtility.FontSize;
+import static com.vaadin.flow.theme.lumo.LumoUtility.FontWeight;
+import static com.vaadin.flow.theme.lumo.LumoUtility.Gap;
+import static com.vaadin.flow.theme.lumo.LumoUtility.IconSize;
+import static com.vaadin.flow.theme.lumo.LumoUtility.Margin;
+import static com.vaadin.flow.theme.lumo.LumoUtility.Padding;
+import static com.vaadin.flow.theme.lumo.LumoUtility.TextColor;
+
 
 @Layout
 @PermitAll // When security is enabled, allow all authenticated users

@@ -8,13 +8,24 @@ import com.starline.base.api.resi.dto.AddResiRequest;
 import com.starline.base.api.resi.dto.CourierInfo;
 import com.starline.base.api.resi.dto.ResiInfo;
 import com.starline.base.ui.component.AppVerticalLayout;
-import com.starline.base.ui.constant.StyleSheet;
+import com.starline.base.ui.component.ConfirmDeleteDialog;
 import com.starline.base.ui.view.MainLayout;
 import com.starline.security.AppUserInfo;
 import com.starline.security.CurrentUser;
+import com.starline.security.domain.UserId;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.grid.Grid;
+import com.vaadin.flow.component.grid.GridVariant;
+import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H2;
+import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.icon.Icon;
+import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -33,42 +44,39 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 
 @PageTitle("Dashboard")
 @Menu(title = "Dashboard", icon = "vaadin:cube", order = 1)
 @Route(value = "resi-dashboard", layout = MainLayout.class)
+@CssImport("./themes/default/dashboard.css")
 @PermitAll
 @Slf4j
 public class ResiDashboardView extends AppVerticalLayout {
 
+    private static final String FORM_FIELD_CLASS_NAME = "form-field";
+    private static final String GRID_CELL_CONTENT_CSS_CLASS = "grid-cell-content";
+    private static final String GRID_CELL_ICON_CSS_CLASS = "grid-cell-icon";
+    private static final String GRID_CELL_TEXT_CSS_CLASS = "grid-cell-text";
+    private static final String ADD_PACKAGE_TEXT = "Add Package";
 
     private final transient AppUserInfo appUserInfo;
-
     private final transient ResiService resiService;
-
     private final transient CourierService courierService;
-
     private final transient TextField trackingNumberField = new TextField("Tracking Number");
-
     private final transient TextField additionalValue = new TextField("Additional Value");
-
     private final transient ComboBox<CourierInfo> courierComboBox = new ComboBox<>("Courier");
-
-    private final transient Button addResiBtn = new Button("Add Resi");
-
-    private final Binder<ResiData> resiDataBinder = new Binder<>();
-
-    private final List<ResiInfo> resiDataList = new ArrayList<>();
-
+    private final transient Button addResiBtn = new Button(ADD_PACKAGE_TEXT);
+    private Binder<ResiData> resiDataBinder = new Binder<>();
     private final Grid<ResiInfo> resiGrid = new Grid<>();
-
     private final transient ResiData resiData = new ResiData();
-
-    private final VerticalLayout resiLeftVerticalLayout = new VerticalLayout();
+    private final VerticalLayout additionalFieldContainer = new VerticalLayout();
 
     public ResiDashboardView(CurrentUser currentUser, ResiService resiService, CourierService courierService) {
         super("Dashboard");
@@ -77,76 +85,291 @@ public class ResiDashboardView extends AppVerticalLayout {
         this.courierService = courierService;
 
 
+        addClassName("dashboard-main");
+        setSizeFull();
+        setPadding(false);
+        setSpacing(false);
 
-        // Set Courier
-        courierComboBox.setAllowCustomValue(false);
-        courierComboBox.setItemsPageable(this::getCouriersInfo);
-        courierComboBox.setItemLabelGenerator(CourierInfo::getName);
-        courierComboBox.addValueChangeListener(it -> handleAdditionalValueInfo(it.getValue()));
-        courierComboBox.addCustomValueSetListener(it -> trackingNumberField.setEnabled(false));
+        setupComponents();
+        setupLayout();
+        refreshResiList();
 
-        // Set Tracking Number
-        trackingNumberField.setPlaceholder("input tracking number");
-        trackingNumberField.setEnabled(false);
-        trackingNumberField.setRequiredIndicatorVisible(true);
-
-        // Hide Additional Value
-        additionalValue.setVisible(false);
-
-
-        // Add Resi Btn
-        setupAddResiBtn();
-
-        // Setup Binder
-        setupResiDataValidator();
-
-        // Setup form
-        setupFormAddResi();
-
-        // Setup Grid
-        setupGrid();
     }
 
     @Getter
     static class CourierCode {
-
         private CourierCode() {
         }
 
         public static final String JNE = "JNE";
     }
 
-    private void setupAddResiBtn() {
+    private void setupComponents() {
+        setupCourierComboBox();
+        setupTrackingNumberField();
+        setupAdditionalValueField();
+        setupAddResiButton();
+        setupResiDataValidator();
+        setupGrid();
+    }
+
+    private void setupLayout() {
+        // Main container
+        Div mainContainer = new Div();
+        mainContainer.addClassName("dashboard-container");
+
+        // Header section
+        Div headerSection = createHeaderSection();
+
+
+        // Add package section
+        Div addPackageSection = createAddPackageSection();
+
+        // Package list section
+        Div packageListSection = createPackageListSection();
+
+        mainContainer.add(headerSection, addPackageSection, packageListSection);
+        add(mainContainer);
+    }
+
+    private Div createHeaderSection() {
+        Div headerSection = new Div();
+        headerSection.addClassName("dashboard-header");
+
+        Paragraph subtitle = new Paragraph("Submit new Airway Bill and get notified");
+        subtitle.addClassName("dashboard-subtitle");
+
+        headerSection.add(subtitle);
+        return headerSection;
+    }
+
+
+    private Div createAddPackageSection() {
+        Div addPackageSection = new Div();
+        addPackageSection.addClassName("add-package-section");
+
+        // Section header
+        Div sectionHeader = new Div();
+        sectionHeader.addClassName("section-header");
+
+        H3 sectionTitle = new H3("Submit New Tracking Number");
+        sectionTitle.addClassName("section-title");
+
+        sectionHeader.add(sectionTitle);
+
+        // Form container
+        Div formContainer = new Div();
+        formContainer.addClassName("form-container");
+
+        // Form layout
+        Div formLayout = new Div();
+        formLayout.addClassName("form-layout");
+
+        // First row
+        Div firstRow = new Div();
+        firstRow.addClassName("form-row");
+        firstRow.add(courierComboBox);
+
+        // Second row
+        Div secondRow = new Div();
+        secondRow.addClassName("form-row");
+        secondRow.add(trackingNumberField);
+
+        // Additional fields container
+        additionalFieldContainer.addClassName("additional-fields-container");
+        additionalFieldContainer.setPadding(false);
+        additionalFieldContainer.setSpacing(false);
+
+        // Button container
+        Div buttonContainer = new Div();
+        buttonContainer.addClassName("button-container");
+        buttonContainer.add(addResiBtn);
+
+        formLayout.add(firstRow, secondRow, additionalFieldContainer, buttonContainer);
+        formContainer.add(formLayout);
+
+        addPackageSection.add(sectionHeader, formContainer);
+        return addPackageSection;
+    }
+
+    private Div createPackageListSection() {
+        Div packageListSection = new Div();
+        packageListSection.addClassName("package-list-section");
+
+        // Section header
+        Div sectionHeader = new Div();
+        sectionHeader.addClassName("section-header");
+
+        H2 sectionTitle = new H2("Your Packages");
+        sectionTitle.addClassName("section-title");
+
+        Icon listIcon = VaadinIcon.LIST.create();
+        listIcon.addClassName("section-icon");
+
+        sectionHeader.add(listIcon, sectionTitle);
+
+        // Grid container
+        Div gridContainer = new Div();
+        gridContainer.addClassName("grid-container");
+        gridContainer.add(resiGrid);
+
+        packageListSection.add(sectionHeader, gridContainer);
+        return packageListSection;
+    }
+
+    private void setupCourierComboBox() {
+        courierComboBox.addClassName(FORM_FIELD_CLASS_NAME);
+        courierComboBox.setPlaceholder("Select a courier");
+        courierComboBox.setPrefixComponent(VaadinIcon.TRUCK.create());
+        courierComboBox.setAllowCustomValue(false);
+        courierComboBox.setItemsPageable(this::getCouriersInfo);
+        courierComboBox.setItemLabelGenerator(CourierInfo::getName);
+        courierComboBox.addValueChangeListener(it -> handleAdditionalValueInfo(it.getValue()));
+        courierComboBox.addCustomValueSetListener(it -> trackingNumberField.setEnabled(false));
+        courierComboBox.setRequiredIndicatorVisible(true);
+    }
+
+    private void setupTrackingNumberField() {
+        trackingNumberField.addClassName(FORM_FIELD_CLASS_NAME);
+        trackingNumberField.setPlaceholder("Enter tracking number");
+        trackingNumberField.setPrefixComponent(VaadinIcon.BARCODE.create());
+        trackingNumberField.setEnabled(false);
+        trackingNumberField.setRequiredIndicatorVisible(true);
+        trackingNumberField.setHelperText("Select a courier first to enable this field");
+    }
+
+    private void setupAdditionalValueField() {
+        additionalValue.addClassName(FORM_FIELD_CLASS_NAME);
+        additionalValue.setPrefixComponent(VaadinIcon.PHONE.create());
+        additionalValue.setVisible(false);
+    }
+
+    private void setupAddResiButton() {
+        addResiBtn.addClassName("add-package-btn");
+        addResiBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
+        addResiBtn.setIcon(VaadinIcon.PLUS.create());
         addResiBtn.addClickListener(it -> handlerAddResi());
-        addResiBtn.getStyle().set(StyleSheet.CURSOR, StyleSheet.CURSOR_POINTER);
     }
 
     private void setupGrid() {
+        resiGrid.addClassName("package-grid");
+        resiGrid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_WRAP_CELL_CONTENT);
+        resiGrid.setAllRowsVisible(true);
 
-        resiGrid.addColumn(ResiInfo::getTrackingNumber).setHeader("Tracking Number").setAutoWidth(true).setSortable(false);
-        resiGrid.addColumn(ResiInfo::getCourierName).setHeader("Courier").setAutoWidth(true).setSortable(true);
-        resiGrid.addColumn(ResiInfo::getLastCheckpointUpdate).setHeader("Last Update").setAutoWidth(true).setSortable(true);
+        // Tracking Number column with icon
+        resiGrid.addComponentColumn(resiInfo -> {
+            Div container = new Div();
+            container.addClassName(GRID_CELL_CONTENT_CSS_CLASS);
 
-        add(resiGrid);
+            Icon icon = VaadinIcon.BARCODE.create();
+            icon.addClassName(GRID_CELL_ICON_CSS_CLASS);
+
+            Span text = new Span(resiInfo.getTrackingNumber());
+            text.addClassName(GRID_CELL_TEXT_CSS_CLASS);
+
+            container.add(icon, text);
+            return container;
+        }).setHeader("Tracking Number").setAutoWidth(true).setFlexGrow(1);
+
+        // Courier column with icon
+        resiGrid.addComponentColumn(resiInfo -> {
+            Div container = new Div();
+            container.addClassName(GRID_CELL_CONTENT_CSS_CLASS);
+
+            Icon icon = VaadinIcon.TRUCK.create();
+            icon.addClassName(GRID_CELL_ICON_CSS_CLASS);
+
+            Span text = new Span(resiInfo.getCourierName());
+            text.addClassName(GRID_CELL_TEXT_CSS_CLASS);
+
+            container.add(icon, text);
+            return container;
+        }).setHeader("Courier").setAutoWidth(true).setFlexGrow(1);
+
+
+        // Last Update column with icon
+        resiGrid.addComponentColumn(resiInfo -> {
+            Div container = new Div();
+            container.addClassName(GRID_CELL_CONTENT_CSS_CLASS);
+
+            Icon icon = VaadinIcon.CLOCK.create();
+            icon.addClassName(GRID_CELL_ICON_CSS_CLASS);
+
+            Function<LocalDateTime, String> dateTimeFormatter = dateTime -> {
+                if (dateTime == null) {
+                    return "unknown";
+                }
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+                return dateTime.format(formatter);
+            };
+            Span text = new Span(dateTimeFormatter.apply(resiInfo.getLastCheckpointUpdate()));
+            text.addClassName(GRID_CELL_TEXT_CSS_CLASS);
+
+            container.add(icon, text);
+            return container;
+        }).setHeader("Last Update").setAutoWidth(true).setFlexGrow(1);
+
+        // Actions column
+        resiGrid.addComponentColumn(resiInfo -> {
+            HorizontalLayout actions = new HorizontalLayout();
+            actions.addClassName("grid-actions");
+
+            Button deleteBtn = new Button(VaadinIcon.TRASH.create());
+            deleteBtn.addClassName("action-btn");
+            deleteBtn.addClassName("action-btn-danger");
+            deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+            deleteBtn.getElement().setAttribute("title", "Delete Package");
+            deleteBtn.addClickListener(e -> handleDeleteResi(resiInfo));
+
+            actions.add(deleteBtn);
+            return actions;
+        }).setHeader("Actions").setAutoWidth(true).setFlexGrow(0);
+    }
+
+    private void handleDeleteResi(ResiInfo resiInfo) {
+        new ConfirmDeleteDialog<ResiInfo>(() -> {})
+                .show(resiInfo, ResiInfo::getTrackingNumber, this::callDeleteResi);
+    }
+
+    private void callDeleteResi(ResiInfo resiInfo) {
+        try {
+            resiService.deleteResiByTrackingNumberAndUserId(resiInfo.getTrackingNumber(), getCurrentUserId())
+                    .doOnSuccess(it -> refreshResiList())
+                    .subscribe();
+        } catch (Exception e) {
+            log.warn("Failed to delete resi: {}", resiInfo.getTrackingNumber());
+        }
     }
 
 
+    private void setupResiDataValidator() {
+        resiDataBinder.forField(trackingNumberField)
+                .withValidator(new StringLengthValidator("Tracking number should not be empty", 1, 80))
+                .bind(ResiData::getTrackingNumber, ResiData::setTrackingNumber);
 
-    private void setupFormAddResi() {
-        HorizontalLayout layout = new HorizontalLayout();
-        layout.add(courierComboBox);
+        resiDataBinder.setBean(resiData);
+    }
 
-        resiLeftVerticalLayout.add(trackingNumberField);
-        layout.add(resiLeftVerticalLayout);
+    private void resetResiBinder() {
 
-        layout.add(addResiBtn);
-        add(layout);
+        resiDataBinder = new Binder<>();
+        setupResiDataValidator();
     }
 
     private void handlerAddResi() {
+        if (!resiDataBinder.validate().isOk()) {
+            showErrorNotification("Please fix the form errors before submitting");
+            return;
+        }
+
         Long courierId = Optional.ofNullable(courierComboBox.getValue()).map(CourierInfo::getId).orElse(null);
         String trackingNumber = resiData.getTrackingNumber();
 
+        if (courierId == null) {
+            courierComboBox.setInvalid(true);
+            courierComboBox.setErrorMessage("Please select a courier");
+            return;
+        }
 
         AddResiRequest payload = AddResiRequest.builder()
                 .trackingNumber(trackingNumber)
@@ -154,29 +377,75 @@ public class ResiDashboardView extends AppVerticalLayout {
                 .courierId(courierId)
                 .additionalValue1(resiData.getAdditionalValue())
                 .build();
+
+        // Disable form during submission
+        setFormEnabled(false);
+        addResiBtn.setText("Adding...");
+        addResiBtn.setIcon(VaadinIcon.SPINNER.create());
+
         resiService.addResi(payload)
                 .subscribe(this::handleSuccessAddResi, this::handleAddResiBadRequestError);
-        Notification.show("Resi Sent! You will receive an update if the process is success", 3000, Notification.Position.TOP_CENTER);
+
     }
 
     private void handleSuccessAddResi(ApiResponse<String> apiResponse) {
-        getUI().ifPresent(ui -> ui.access(() -> Notification.show(apiResponse.getMessage(), 3000, Notification.Position.TOP_CENTER)
-                .addThemeVariants(NotificationVariant.LUMO_SUCCESS)));
+        getUI().ifPresent(ui -> ui.access(() -> {
+            showSuccessNotification(apiResponse.getMessage());
+            resetForm();
+            setFormEnabled(true);
+            refreshResiList();
+        }));
     }
 
     private void handleAddResiBadRequestError(Throwable throwable) {
-        WebClientLoggingFilter.ApiClientException ex = (WebClientLoggingFilter.ApiClientException) throwable;
-
-        if (HttpStatus.BAD_REQUEST.value() != ex.getHttpStatusCode()) {
-            throw ex;
-        }
-
+        log.error("❌ Failed to add resi: {}", throwable.getMessage(), throwable);
         getUI().ifPresent(ui -> ui.access(() -> {
-            clearFieldErrors();
-            ex.getFieldErrors().forEach(this::showFieldError);
-        }));
+            setFormEnabled(true);
+            addResiBtn.setText(ADD_PACKAGE_TEXT);
+            addResiBtn.setIcon(VaadinIcon.PLUS.create());
 
-        throw ex;
+            if (throwable instanceof WebClientLoggingFilter.ApiClientException ex) {
+                switch (HttpStatus.valueOf(ex.getHttpStatusCode())) {
+                    case HttpStatus.BAD_REQUEST:
+                        clearFieldErrors();
+                        ex.getFieldErrors().forEach(this::showFieldError);
+                        showErrorNotification("Please fix the form errors and try again");
+                        break;
+                    case HttpStatus.CONFLICT, NOT_FOUND:
+                        showErrorNotification(ex.getErrorMessage());
+                        break;
+                    default:
+                        showErrorNotification("Unexpected error occurred. Please try again.");
+                }
+            } else {
+                showErrorNotification("Network error. Please check your connection and try again.");
+            }
+        }));
+    }
+
+    private void setFormEnabled(boolean enabled) {
+        courierComboBox.setEnabled(enabled);
+        trackingNumberField.setEnabled(enabled && courierComboBox.getValue() != null);
+        additionalValue.setEnabled(enabled);
+        addResiBtn.setEnabled(enabled);
+
+        if (!enabled) {
+            addResiBtn.setText("Adding...");
+            addResiBtn.setIcon(VaadinIcon.SPINNER.create());
+        } else {
+            addResiBtn.setText(ADD_PACKAGE_TEXT);
+            addResiBtn.setIcon(VaadinIcon.PLUS.create());
+        }
+    }
+
+    private void resetForm() {
+        courierComboBox.clear();
+        trackingNumberField.clear();
+        additionalValue.clear();
+        trackingNumberField.setEnabled(false);
+        additionalValue.setVisible(false);
+        additionalFieldContainer.removeAll();
+        clearFieldErrors();
     }
 
     private void showFieldError(ApiResponse.FieldError fieldError) {
@@ -213,13 +482,6 @@ public class ResiDashboardView extends AppVerticalLayout {
         additionalValue.setErrorMessage(null);
     }
 
-
-    private void setupResiDataValidator() {
-        resiDataBinder.forField(trackingNumberField)
-                .withValidator(new StringLengthValidator("Tracking number should not be empty", 1, 80))
-                .bind(ResiData::getTrackingNumber, ResiData::setTrackingNumber);
-    }
-
     private List<CourierInfo> getCouriersInfo(Pageable pageable, String filter) {
         ApiResponse<Page<CourierInfo>> data = courierService.getCouriers(filter, pageable).block();
         return Optional.ofNullable(data)
@@ -229,29 +491,71 @@ public class ResiDashboardView extends AppVerticalLayout {
     }
 
     private void handleAdditionalValueInfo(CourierInfo courierInfo) {
+        // Clear previous additional fields
+        additionalFieldContainer.removeAll();
+
         Optional.ofNullable(courierInfo)
                 .ifPresent(it -> {
                     if (Objects.equals(it.getCode(), CourierCode.JNE)) {
-                        additionalValue.setPlaceholder("e.g 23972");
-                        additionalValue.setHelperText("*Last 5 digits of package's receiver's phone number");
+                        additionalValue.setPlaceholder("e.g. 23972");
+                        additionalValue.setHelperText("Last 5 digits of package receiver's phone number");
                         additionalValue.setRequiredIndicatorVisible(true);
                         additionalValue.setVisible(true);
-                        resiLeftVerticalLayout.add(additionalValue);
+                        additionalFieldContainer.add(additionalValue);
+
+                        // Update binder for additional value
                         resiDataBinder.forField(additionalValue)
                                 .withValidator(new StringLengthValidator("Last 5 digits of mobile phone is required", 5, 5))
                                 .bind(ResiData::getAdditionalValue, ResiData::setAdditionalValue);
                     } else {
-                        resiLeftVerticalLayout.remove(additionalValue);
                         additionalValue.setVisible(false);
+                        additionalValue.setRequiredIndicatorVisible(false);
+                        resetResiBinder();
                     }
                     trackingNumberField.setEnabled(true);
+                    trackingNumberField.setHelperText("Enter the tracking number provided by " + it.getName());
                 });
+
         if (Objects.isNull(courierInfo)) {
             log.info("Courier is null. Disable tracking number field");
             additionalValue.setVisible(false);
             trackingNumberField.setEnabled(false);
+            trackingNumberField.setHelperText("Select a courier first to enable this field");
+        }
+    }
+
+    private void showSuccessNotification(String message) {
+        Notification notification = Notification.show(message, 4000, Notification.Position.TOP_CENTER);
+        notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+    }
+
+    private void showErrorNotification(String message) {
+        Notification notification = Notification.show(message, 5000, Notification.Position.TOP_CENTER);
+        notification.addThemeVariants(NotificationVariant.LUMO_WARNING);
+    }
+
+    private void refreshResiList() {
+
+        if (Objects.isNull(appUserInfo)) {
+            log.warn("Current User is null. Cannot refresh resi list");
+            return;
         }
 
+        resiService.getResiByUserId(getCurrentUserId())
+                .subscribe(this::handleSuccessFetchResi);
+    }
+
+    private void handleSuccessFetchResi(ApiResponse<List<ResiInfo>> apiResponse) {
+        List<ResiInfo> resiInfoList = apiResponse.getData();
+        getUI().ifPresent(ui -> ui.access(() -> resiGrid.setItems(resiInfoList)));
+    }
+
+    private Long getCurrentUserId() {
+        return Optional.ofNullable(appUserInfo)
+                .map(AppUserInfo::getUserId)
+                .map(UserId::toString)
+                .map(Long::valueOf)
+                .orElse(null);
     }
 
     @Data

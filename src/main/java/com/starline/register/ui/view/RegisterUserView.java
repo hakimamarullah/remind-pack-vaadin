@@ -32,7 +32,7 @@ import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.spring.security.AuthenticationContext;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import lombok.Data;
-import reactor.core.publisher.Mono;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.Objects;
@@ -210,31 +210,31 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
                     .otp(otp)
                     .build();
 
-            Mono<ApiResponse<String>> response = registrationService.registerUser(payload);
-
-            // Subscribe to the Mono and handle the response
-            response.subscribe(
-                    apiResponse -> {
-                        // Success case
-                        if (apiResponse.getCode() == 200) {
-                            getUI().ifPresent(ui -> ui.access(() -> {
-                                Notification.show("Registration successful!", 3000, Notification.Position.TOP_CENTER)
-                                        .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
-                                ui.navigate("/login");
-                            }));
-                        }
-                    },
-                    error -> {
-                        if (error instanceof WebClientLoggingFilter.ApiClientException ex) {
-                            handleRegistrationError((ApiResponse<Object>) ex.getApiResponse());
-                        }
-                    }
-            );
+            registrationService.registerUser(payload)
+                    .subscribe(this::registrationSuccessHandler,
+                            error -> {
+                                if (error instanceof WebClientLoggingFilter.ApiClientException ex) {
+                                    handleRegistrationError((ApiResponse<Object>) ex.getApiResponse());
+                                }
+                            }
+                    );
 
         } catch (ValidationException e) {
             Notification.show("Please make sure all fields are valid.", 3000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
         }
+    }
+
+    private void registrationSuccessHandler(ApiResponse<String> apiResponse) {
+        // Success case
+        if (apiResponse.getCode() == HttpStatus.CREATED.value()) {
+            getUI().ifPresent(ui -> ui.access(() -> {
+                Notification.show("Registration successful!", 3000, Notification.Position.TOP_CENTER)
+                        .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
+                ui.navigate("/login");
+            }));
+        }
+
     }
 
     private void handleRegistrationError(ApiResponse<Object> apiResponse) {

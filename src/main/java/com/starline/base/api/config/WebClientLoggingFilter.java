@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.starline.base.api.dto.ApiResponse;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
@@ -68,6 +69,21 @@ public class WebClientLoggingFilter {
                     .orElse(new ArrayList<>());
         }
 
+        public String getErrorMessage() {
+            var defaultMessage = Optional.ofNullable(apiResponse)
+                    .map(ApiResponse::getMessage)
+                    .orElse(null);
+            var messageFromData = Optional.ofNullable(apiResponse)
+                    .map(ApiResponse::getData)
+                    .map(Object::toString)
+                    .orElse(null);
+
+            if (StringUtils.isBlank(defaultMessage)) {
+                return messageFromData;
+            }
+            return defaultMessage;
+        }
+
     }
 
     private static Mono<ClientResponse> logSuccess(ClientResponse response) {
@@ -83,5 +99,4 @@ public class WebClientLoggingFilter {
                 });
     }
 
-    record ApiErrorResponse(String code, String message) {}
 }

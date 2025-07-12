@@ -25,6 +25,7 @@ class MainErrorHandler {
                         if (errorEvent.getThrowable() instanceof WebClientLoggingFilter.ApiClientException ex) {
                             var notification = show4xxError(ex);
                             ui.access(notification::open);
+                            return;
                         }
                         var notification = new Notification(
                                 "An unexpected error has occurred. Please try again later.");
@@ -37,7 +38,7 @@ class MainErrorHandler {
     }
 
     private Notification show4xxError(WebClientLoggingFilter.ApiClientException ex) {
-        var notification = new Notification(StringUtils.capitalize(ex.getMessage()), 3000, Notification.Position.TOP_CENTER);
+        var notification = new Notification(StringUtils.capitalize(ex.getErrorMessage()), 3000, Notification.Position.TOP_CENTER);
         notification.addThemeVariants(NotificationVariant.LUMO_WARNING);
         return notification;
     }

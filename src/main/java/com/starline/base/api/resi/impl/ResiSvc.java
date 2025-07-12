@@ -32,7 +32,7 @@ public class ResiSvc implements ResiService {
     @Override
     public Mono<ApiResponse<List<ResiInfo>>> getResiByUserId(Long userId) {
         return webClient.get()
-                .uri("/resi/{userId}", userId)
+                .uri("/resi/users/{userId}", userId)
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<>() {});
     }
@@ -40,7 +40,7 @@ public class ResiSvc implements ResiService {
     @Override
     public Mono<Void> deleteResiByTrackingNumberAndUserId(String trackingNumber, Long userId) {
         return webClient.delete()
-                .uri("/resi/{trackingNumber}/{userId}", trackingNumber, userId)
+                .uri("/resi/{trackingNumber}/users/{userId}", trackingNumber, userId)
                 .retrieve()
                 .toBodilessEntity()
                 .then();

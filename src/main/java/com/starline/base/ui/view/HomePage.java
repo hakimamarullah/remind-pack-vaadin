@@ -24,10 +24,12 @@ import java.time.Year;
 
 @AnonymousAllowed
 @PermitAll
-@CssImport("./styles/homepage.css")
+@CssImport("./themes/default/homepage.css")
 public final class HomePage extends Main {
 
     public static final String NAV_ITEM = "nav-item";
+    public static final String RESI_DASHBOARD_PATH = "resi-dashboard";
+    public static final String FOOTER_LINK_COLUMN_CLASS = "footer-link-column";
 
     public HomePage() {
         addClassName("home-main");
@@ -89,15 +91,11 @@ public final class HomePage extends Main {
         contact.addClassName(NAV_ITEM);
         contact.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
-        Button login = new Button("Login", e -> UI.getCurrent().navigate("login"));
-        login.addClassName("nav-login");
-        login.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-
-        Button getStarted = new Button("Get Started", e -> UI.getCurrent().navigate("register"));
+        Button getStarted = new Button("Get Started", e -> UI.getCurrent().navigate(RESI_DASHBOARD_PATH));
         getStarted.addClassName("nav-cta");
         getStarted.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        navMenu.add(login, getStarted);
+        navMenu.add(getStarted);
         navContent.add(logo, navMenu);
         nav.add(navContent);
 
@@ -128,7 +126,7 @@ public final class HomePage extends Main {
         getStarted.addClassName("hero-button-primary");
         getStarted.getStyle().set(StyleSheet.CURSOR, StyleSheet.CURSOR_POINTER);
         getStarted.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
-        getStarted.addClickListener(e -> UI.getCurrent().navigate("register"));
+        getStarted.addClickListener(e -> UI.getCurrent().navigate(RESI_DASHBOARD_PATH));
 
         Button watchDemo = new Button("Watch Demo", VaadinIcon.PLAY.create());
         watchDemo.addClassName("hero-button-secondary");
@@ -332,7 +330,7 @@ public final class HomePage extends Main {
         Button ctaButton = new Button("Get Started for Free", VaadinIcon.ARROW_RIGHT.create());
         ctaButton.addClassName("cta-button");
         ctaButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
-        ctaButton.addClickListener(e -> UI.getCurrent().navigate("register"));
+        ctaButton.addClickListener(e -> UI.getCurrent().navigate(RESI_DASHBOARD_PATH));
 
         ctaContent.add(ctaTitle, ctaSubtitle, ctaButton);
         cta.add(ctaContent);
@@ -364,7 +362,7 @@ public final class HomePage extends Main {
         footerLinks.addClassName("footer-links");
 
         Div linkColumn1 = new Div();
-        linkColumn1.addClassName("footer-link-column");
+        linkColumn1.addClassName(FOOTER_LINK_COLUMN_CLASS);
         linkColumn1.add(
                 new H4("Product"),
                 new Anchor("#", "Features"),
@@ -374,7 +372,7 @@ public final class HomePage extends Main {
         );
 
         Div linkColumn2 = new Div();
-        linkColumn2.addClassName("footer-link-column");
+        linkColumn2.addClassName(FOOTER_LINK_COLUMN_CLASS);
         linkColumn2.add(
                 new H4("Company"),
                 new Anchor("#", "About"),
@@ -384,7 +382,7 @@ public final class HomePage extends Main {
         );
 
         Div linkColumn3 = new Div();
-        linkColumn3.addClassName("footer-link-column");
+        linkColumn3.addClassName(FOOTER_LINK_COLUMN_CLASS);
         linkColumn3.add(
                 new H4("Support"),
                 new Anchor("https://linkedin.com/in/hakimamarullah", "Help Center"),
@@ -394,10 +392,10 @@ public final class HomePage extends Main {
         );
 
         Div linkColumn4 = new Div();
-        linkColumn4.addClassName("footer-link-column");
+        linkColumn4.addClassName(FOOTER_LINK_COLUMN_CLASS);
         linkColumn4.add(
                 new H4("Legal"),
-                new Anchor("#","Privacy Policy"),
+                new Anchor("#", "Privacy Policy"),
                 new Anchor("#", "Terms of Service"),
                 new Anchor("#", "Cookie Policy"),
                 new Anchor("#", "GDPR")

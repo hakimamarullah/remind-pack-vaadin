@@ -1,0 +1,206 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    networks:
+      - remind-pack
+
+  starline-scc:
+    image: hakimamarullah/starline-scc:v1.0.0
+    pull_policy: always
+    container_name: starline-scc
+    environment:
+      JAVA_OPTS: -DUSERNAME=${GITHUB_USERNAME} -DPERSONAL_ACCESS_TOKEN={GITHUB_TOKEN} -Djdk.tls.client.protocols=TLSv1.2 -DSERVER_PORT=8888
+      JAVA_ARGS: --spring.cloud.config.server.git.skipSslValidation=true
+    networks:
+      - remind-pack
+
+  selenium-hub:
+    image: selenium/hub:4.21.0
+    container_name: selenium-hub
+    environment:
+      - GRID_MAX_SESSION=16
+      - GRID_BROWSER_TIMEOUT=30
+      - GRID_TIMEOUT=30
+    networks:
+      - remind-pack
+
+  chrome-node:
+    image: selenium/node-chrome:4.21.0
+    shm_size: 2g
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - NODE_MAX_INSTANCES=4
+      - NODE_MAX_SESSION=4
+    networks:
+      - remind-pack
+    deploy:
+      replicas: 3
+
+  starline-registry:
+    image: hakimamarullah/starline-service-registry:v1.0.0
+    pull_policy: always
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    networks:
+      - remind-pack
+
+  starline-gateway:
+    image: hakimamarullah/starline-spring-gateway:v1.0.0
+    pull_policy: always
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_CLOUD_CONFIG_URI=http://starline-scc:8888
+    depends_on:
+      - starline-scc
+    networks:
+      - remind-pack
+
+  scrapper-svc:
+    image: hakimamarullah/remind-pack-scrapper-svc:v1.0.0
+    pull_policy: always
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_CLOUD_CONFIG_URI=http://starline-scc:8888
+      - JAVA_OPTS=-Dwebdriver.remote.url=http://selenium-hub:4444/wd/hub
+      - LOG_FILE_PATH=/tmp/logs
+    volumes:
+      - ./logs:/tmp/logs
+    depends_on:
+      - selenium-hub
+      - starline-scc
+    deploy:
+      replicas: 2
+    networks:
+      - remind-pack
+
+  users-svc:
+    image: hakimamarullah/remind-pack-users-svc:v1.0.0
+    pull_policy: always
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_CLOUD_CONFIG_URI=http://starline-scc:8888
+      - LOG_FILE_PATH=/tmp/logs
+    volumes:
+      - ./logs:/tmp/logs
+    depends_on:
+      - postgres
+      - starline-scc
+    networks:
+      - remind-pack
+  whatsapp-svc:
+    image: hakimamarullah/starline-wapi:v1.0.0
+    pull_policy: always
+    restart: always
+    volumes:
+      - ./.wwebjs_auth:/usr/src/app/.wwebjs_auth
+    environment:
+      EUREKA_INSTANCE_HOST: whatsapp-svc
+      EUREKA_INSTANCE_IP: whatsapp-svc
+      EUREKA_SERVER_HOST: starline-registry
+    networks:
+      - remind-pack
+
+  resi-svc:
+    image: hakimamarullah/remind-pack-resi-svc:v1.0.0
+    pull_policy: always
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_CLOUD_CONFIG_URI=http://starline-scc:8888
+      - LOG_FILE_PATH=/tmp/logs
+    volumes:
+      - ./logs:/tmp/logs
+    depends_on:
+      - postgres
+      - starline-scc
+    networks:
+      - remind-pack
+
+  remind-pack-vaadin:
+    image: hakimamarullah/remind-pack-vaadin:v1.0.0
+    pull_policy: always
+    restart: on-failure
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_APPLICATION_NAME=remind-pack-vaadin
+      - JAVA_OPTS=-Dspring.datasource.url=jdbc:postgresql://postgres:5432/micro -Durl.svc.users=http://starline-gateway:8082/remind-pack-users-svc -Durl.svc.resi=http://starline-gateway:8082/remind-pack-resi-svc
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    networks:
+      - remind-pack
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - remind-pack
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.0.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_SERVICEACCOUNTTOKEN=${SVC_ACCOUNT_TOKEN_KIBANA}  # This will be replaced
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - remind-pack
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:9.0.0
+    container_name: filebeat
+    user: root
+    command: >
+      bash -c "
+        cp /tmp/filebeat.yml /usr/share/filebeat/filebeat.yml &&
+        chmod 644 /usr/share/filebeat/filebeat.yml &&
+        filebeat --strict.perms=true
+      "
+    environment:
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTICSEARCH_PASSWORD}
+    depends_on:
+      - elasticsearch
+    volumes:
+      - ./logs:/usr/share/filebeat/input-logs:ro
+      - ./filebeat.yml:/tmp/filebeat.yml:ro  # Mount to /tmp first
+      - filebeat-data:/usr/share/filebeat/data
+    networks:
+      - remind-pack
+
+volumes:
+  esdata:
+  filebeat-data:
+
+networks:
+  remind-pack:
+    driver: bridge

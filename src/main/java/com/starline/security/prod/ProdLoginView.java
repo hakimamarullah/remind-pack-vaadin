@@ -16,6 +16,7 @@ import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.spring.security.AuthenticationContext;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 
+
 @PageTitle("Login")
 @AnonymousAllowed
 public class ProdLoginView extends Main implements BeforeEnterObserver {
@@ -33,7 +34,6 @@ public class ProdLoginView extends Main implements BeforeEnterObserver {
         login.setAction(LOGIN_PATH);
         login.setForgotPasswordButtonVisible(true); // We'll use a custom link below
         login.addForgotPasswordListener(e -> e.getSource().getUI().ifPresent(ui -> ui.navigate("forgot-password")));
-
 
         // Branding
         Icon logo = VaadinIcon.PACKAGE.create();

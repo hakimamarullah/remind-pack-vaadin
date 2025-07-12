@@ -41,7 +41,7 @@ public class ProdSecurityConfig {
 
         return http.with(VaadinSecurityConfigurer.vaadin(), configurer -> configurer
                 .loginView(ProdLoginView.LOGIN_PATH)
-                .enableNavigationAccessControl(true)
+                .enableAuthorizedRequestsConfiguration(true)
         ).build();
     }
 

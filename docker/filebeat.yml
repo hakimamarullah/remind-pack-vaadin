@@ -1,0 +1,63 @@
+filebeat.inputs:
+  - type: filestream
+    id: microservices
+    enabled: true
+    paths:
+      - /usr/share/filebeat/input-logs/*.log
+
+    parsers:
+      - multiline:
+          type: pattern
+          pattern: '^trace_id:'
+          negate: true
+          match: after
+
+    processors:
+      - script:
+          lang: javascript
+          source: >
+            function process(event) {
+              var filePath = event.Get("log.file.path");
+              if (filePath) {
+                var fileName = filePath.split("/").pop();
+                if (fileName) {
+                  var baseName = fileName.replace(/\.log(\.gz)?$/, "").split("@")[0];
+                  event.Put("service.name", baseName);
+                }
+              }
+            }
+
+      - dissect:
+          tokenizer: 'trace_id: %{trace_id} | span_id: %{span_id} | %{log_date} %{log_time} [%{thread}] %{log.level} %{logger} - %{log.message}'
+          field: "message"
+          ignore_failure: true
+
+      - drop_fields:
+          fields: ["log.file.path", "input.type"]
+          ignore_missing: true
+
+# Template setup
+setup.template.enabled: true
+setup.template.name: "starline"
+setup.template.pattern: "starline-*"
+setup.template.settings:
+  index.number_of_shards: 1
+  index.number_of_replicas: 0
+
+# Disable ILM
+setup.ilm.enabled: false
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  index: "starline-%{[service.name]}"
+  username: "${ELASTICSEARCH_USERNAME}"
+  password: "${ELASTICSEARCH_PASSWORD}"
+
+setup.kibana:
+  host: "kibana:5601"
+  username: "${ELASTICSEARCH_USERNAME}"
+  password: "${ELASTICSEARCH_PASSWORD}"
+
+# Logging
+logging.level: info
+logging.to_stderr: true
