@@ -17,7 +17,7 @@ services:
     pull_policy: always
     container_name: starline-scc
     environment:
-      JAVA_OPTS: -DUSERNAME=${GITHUB_USERNAME} -DPERSONAL_ACCESS_TOKEN={GITHUB_TOKEN} -Djdk.tls.client.protocols=TLSv1.2 -DSERVER_PORT=8888
+      JAVA_OPTS: -DUSERNAME=${GITHUB_USERNAME} -DPERSONAL_ACCESS_TOKEN=${GITHUB_TOKEN} -Djdk.tls.client.protocols=TLSv1.2 -DSERVER_PORT=8888
       JAVA_ARGS: --spring.cloud.config.server.git.skipSslValidation=true
     networks:
       - remind-pack
