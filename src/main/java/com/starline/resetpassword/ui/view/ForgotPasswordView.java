@@ -116,7 +116,7 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
         Button backToLoginBtn = new Button("Back to Login");
         backToLoginBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
         backToLoginBtn.getStyle().set(StyleSheet.CURSOR, StyleSheet.CURSOR_POINTER);
-        
+
         sendOtpBtn.getStyle().set(StyleSheet.CURSOR, StyleSheet.CURSOR_POINTER);
 
         // Form layout with white background
@@ -232,6 +232,21 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
     }
 
 
+    private void setFormEnabled(boolean enabled) {
+        phoneField.setEnabled(enabled);
+        otpField.setEnabled(enabled);
+        newPasswordField.setEnabled(enabled);
+        confirmPasswordField.setEnabled(enabled);
+        resetPasswordBtn.setEnabled(enabled);
+
+        if (!enabled) {
+            resetPasswordBtn.setText("Submitting...");
+            resetPasswordBtn.setIcon(VaadinIcon.SPINNER.create());
+        } else {
+            resetPasswordBtn.setText("Reset Password");
+            resetPasswordBtn.setIcon(VaadinIcon.PLUS.create());
+        }
+    }
     private void handleResetPassword() {
         try {
             binder.writeBean(passwordReset);
@@ -246,12 +261,14 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
                     .newPassword(newPassword)
                     .confirmNewPassword(newPassword)
                     .build();
+            setFormEnabled(false);
             passwordResetService.resetPassword(payload)
                     .subscribe(this::handleResetPasswordResponse, this::handleResetPasswordError);
 
         } catch (ValidationException e) {
             Notification.show("Please fix the validation errors", 3000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_WARNING);
+            setFormEnabled(true);
         }
     }
 
@@ -259,6 +276,7 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
         getUI().ifPresent(ui -> ui.access(() -> {
             Notification.show(response.getMessage(), 3000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+            setFormEnabled(true);
             ui.navigate("/login");
         }));
     }
@@ -269,7 +287,13 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
             getUI().ifPresent(ui -> ui.access(() -> handleFieldErrors(exception.getFieldErrors())));
             return;
         }
-        throw exception;
+        setFormEnabled(true);
+        show4xxError(exception.getErrorMessage());
+    }
+
+    private void show4xxError(String message) {
+        Notification.show(message, 3000, Notification.Position.TOP_CENTER)
+                .addThemeVariants(NotificationVariant.LUMO_WARNING);
     }
 
     private void handleFieldErrors(List<ApiResponse.FieldError> fieldErrors) {

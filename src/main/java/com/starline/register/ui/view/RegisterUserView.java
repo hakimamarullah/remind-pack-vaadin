@@ -34,8 +34,10 @@ import com.vaadin.flow.theme.lumo.LumoUtility;
 import lombok.Data;
 import org.springframework.http.HttpStatus;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @PageTitle("Register")
 @AnonymousAllowed
@@ -210,11 +212,12 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
                     .otp(otp)
                     .build();
 
+            setFormEnabled(false);
             registrationService.registerUser(payload)
                     .subscribe(this::registrationSuccessHandler,
                             error -> {
                                 if (error instanceof WebClientLoggingFilter.ApiClientException ex) {
-                                    handleRegistrationError((ApiResponse<Object>) ex.getApiResponse());
+                                    handleRegistrationError(ex);
                                 }
                             }
                     );
@@ -237,9 +240,12 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
 
     }
 
-    private void handleRegistrationError(ApiResponse<Object> apiResponse) {
-        List<ApiResponse.FieldError> fieldErrors = apiResponse.getFieldErrors();
+    private void handleRegistrationError(WebClientLoggingFilter.ApiClientException ex) {
+        List<ApiResponse.FieldError> fieldErrors = Optional.ofNullable(ex.getApiResponse())
+                .map(ApiResponse::getFieldErrors)
+                .orElse(new ArrayList<>());
 
+        setFormEnabled(true);
         if (!fieldErrors.isEmpty()) {
             // Clear previous validation errors on all fields
             clearFieldErrors();
@@ -261,11 +267,32 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
             getUI().ifPresent(ui -> ui.access(() -> Notification.show("Please fix the highlighted errors and try again.", 3000,
                             Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR)));
-        } else {
-            getUI().ifPresent(ui ->
-                    ui.access(() -> Notification.show(apiResponse.getMessage(), 3000, Notification.Position.TOP_CENTER)
-                            .addThemeVariants(NotificationVariant.LUMO_ERROR)));
+            return;
         }
+
+        show4xxError(ex.getErrorMessage());
+    }
+
+    private void setFormEnabled(boolean enabled) {
+        getUI().ifPresent(ui -> ui.access(() -> {
+            phoneField.setEnabled(enabled);
+            passwordField.setEnabled(enabled);
+            confirmPasswordField.setEnabled(enabled);
+            otpField.setEnabled(enabled);
+            registerBtn.setEnabled(enabled);
+
+            if (!enabled) {
+                registerBtn.setText("Signing up...");
+                registerBtn.setIcon(VaadinIcon.SPINNER.create());
+            } else {
+                registerBtn.setText("Sign Up");
+                registerBtn.setIcon(VaadinIcon.PLUS.create());
+            }
+        }));
+    }
+    private void show4xxError(String message) {
+        Notification.show(message, 3000, Notification.Position.TOP_CENTER)
+                .addThemeVariants(NotificationVariant.LUMO_WARNING);
     }
 
     private String mapApiFieldToFormField(String apiFieldName) {

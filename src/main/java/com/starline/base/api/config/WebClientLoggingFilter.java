@@ -19,6 +19,8 @@ import java.util.Optional;
 @Slf4j
 public class WebClientLoggingFilter {
 
+    private WebClientLoggingFilter() {
+    }
     public static ExchangeFilterFunction logAndHandleErrors(ObjectMapper objectMapper) {
         return ExchangeFilterFunction.ofResponseProcessor(response -> {
             if (response.statusCode().is2xxSuccessful()) {
@@ -28,7 +30,7 @@ public class WebClientLoggingFilter {
                         .defaultIfEmpty("No body")
                         .flatMap(body -> {
                             try {
-                                log.error("❌ Error {}: {}", response.statusCode().value(), body);
+                                log.debug("❌ Error {}: {}", response.statusCode().value(), body);
                                 if (response.statusCode().isSameCodeAs(HttpStatus.BAD_REQUEST)) {
                                     ApiResponse<Map<String, String>> errorResponse = objectMapper.readValue(body,
                                             new TypeReference<>() {
@@ -45,7 +47,7 @@ public class WebClientLoggingFilter {
                                 });
                                 return Mono.error(new ApiClientException(response.statusCode().value(), errorResponse));
                             } catch (Exception e) {
-                                log.error("❌ Failed to parse error response body: {}", body, e);
+                                log.debug("❌ Failed to parse error response body: {}", body, e);
                                 return Mono.error(new RuntimeException("Unexpected error occurred"));
                             }
                         });
@@ -90,7 +92,7 @@ public class WebClientLoggingFilter {
         return response.bodyToMono(String.class)
                 .defaultIfEmpty("No body")
                 .flatMap(body -> {
-                    log.info("✅ Success Response: HTTP {} - {}", response.statusCode(), body);
+                    log.debug("✅ Success Response: HTTP {} - {}", response.statusCode(), body);
                     return Mono.just(ClientResponse
                             .create(response.statusCode())
                             .headers(h -> h.addAll(response.headers().asHttpHeaders()))

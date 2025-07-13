@@ -222,6 +222,7 @@ public class ResiDashboardView extends AppVerticalLayout {
         courierComboBox.setPlaceholder("Select a courier");
         courierComboBox.setPrefixComponent(VaadinIcon.TRUCK.create());
         courierComboBox.setAllowCustomValue(false);
+        courierComboBox.setPageSize(5);
         courierComboBox.setItemsPageable(this::getCouriersInfo);
         courierComboBox.setItemLabelGenerator(CourierInfo::getName);
         courierComboBox.addValueChangeListener(it -> handleAdditionalValueInfo(it.getValue()));
@@ -390,7 +391,7 @@ public class ResiDashboardView extends AppVerticalLayout {
 
     private void handleSuccessAddResi(ApiResponse<String> apiResponse) {
         getUI().ifPresent(ui -> ui.access(() -> {
-            showSuccessNotification(apiResponse.getMessage());
+            showSuccessNotification(apiResponse.getData());
             resetForm();
             setFormEnabled(true);
             refreshResiList();
@@ -526,7 +527,7 @@ public class ResiDashboardView extends AppVerticalLayout {
 
     private void showSuccessNotification(String message) {
         Notification notification = Notification.show(message, 4000, Notification.Position.TOP_CENTER);
-        notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        notification.addThemeVariants(NotificationVariant.LUMO_PRIMARY);
     }
 
     private void showErrorNotification(String message) {
