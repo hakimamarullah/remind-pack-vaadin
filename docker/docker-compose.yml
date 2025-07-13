@@ -179,7 +179,7 @@ services:
       - SPRING_APPLICATION_NAME=remind-pack-vaadin
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
-      - JAVA_OPTS=-Dspring.datasource.url=jdbc:postgresql://postgres:5432/micro?currentSchema=user_svc -Durl.svc.users=http://starline-gateway:8082/remind-pack-users-svc -Durl.svc.resi=http://starline-gateway:8082/remind-pack-resi-svc
+      - JAVA_OPTS=-Dlogging.level.com.starline.base.api.config.WebClientLoggingFilter=DEBUG -Dspring.datasource.url=jdbc:postgresql://postgres:5432/micro?currentSchema=user_svc -Durl.svc.users=http://starline-gateway:8082/remind-pack-users-svc -Durl.svc.resi=http://starline-gateway:8082/remind-pack-resi-svc
     ports:
       - "8080:8080"
     depends_on:

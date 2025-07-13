@@ -38,9 +38,11 @@ class MainErrorHandler {
     }
 
     private Notification show4xxError(WebClientLoggingFilter.ApiClientException ex) {
-        var notification = new Notification(StringUtils.capitalize(ex.getErrorMessage()), 3000, Notification.Position.TOP_CENTER);
+        var notification = new Notification(StringUtils.capitalize(StringUtils.defaultIfBlank(ex.getErrorMessage(), "System Unavailable")), 3000, Notification.Position.TOP_CENTER);
         notification.addThemeVariants(NotificationVariant.LUMO_WARNING);
         return notification;
     }
+
+
 
 }
