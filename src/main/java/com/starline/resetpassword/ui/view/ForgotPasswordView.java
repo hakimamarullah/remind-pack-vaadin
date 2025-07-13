@@ -233,20 +233,23 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
 
 
     private void setFormEnabled(boolean enabled) {
-        phoneField.setEnabled(enabled);
-        otpField.setEnabled(enabled);
-        newPasswordField.setEnabled(enabled);
-        confirmPasswordField.setEnabled(enabled);
-        resetPasswordBtn.setEnabled(enabled);
+        getUI().ifPresent(ui -> ui.access(() -> {
+            phoneField.setEnabled(enabled);
+            otpField.setEnabled(enabled);
+            newPasswordField.setEnabled(enabled);
+            confirmPasswordField.setEnabled(enabled);
+            resetPasswordBtn.setEnabled(enabled);
 
-        if (!enabled) {
-            resetPasswordBtn.setText("Submitting...");
-            resetPasswordBtn.setIcon(VaadinIcon.SPINNER.create());
-        } else {
-            resetPasswordBtn.setText("Reset Password");
-            resetPasswordBtn.setIcon(VaadinIcon.PLUS.create());
-        }
+            if (!enabled) {
+                resetPasswordBtn.setText("Submitting...");
+                resetPasswordBtn.setIcon(VaadinIcon.SPINNER.create());
+            } else {
+                resetPasswordBtn.setText("Reset Password");
+                resetPasswordBtn.setIcon(null);
+            }
+        }));
     }
+
     private void handleResetPassword() {
         try {
             binder.writeBean(passwordReset);
@@ -292,8 +295,8 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
     }
 
     private void show4xxError(String message) {
-        Notification.show(message, 3000, Notification.Position.TOP_CENTER)
-                .addThemeVariants(NotificationVariant.LUMO_WARNING);
+        getUI().ifPresent(ui -> ui.access(() -> Notification.show(message, 3000, Notification.Position.TOP_CENTER)
+                .addThemeVariants(NotificationVariant.LUMO_WARNING)));
     }
 
     private void handleFieldErrors(List<ApiResponse.FieldError> fieldErrors) {

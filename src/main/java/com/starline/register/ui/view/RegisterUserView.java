@@ -286,13 +286,15 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
                 registerBtn.setIcon(VaadinIcon.SPINNER.create());
             } else {
                 registerBtn.setText("Sign Up");
-                registerBtn.setIcon(VaadinIcon.PLUS.create());
+                registerBtn.setIcon(null);
             }
         }));
     }
+
     private void show4xxError(String message) {
-        Notification.show(message, 3000, Notification.Position.TOP_CENTER)
-                .addThemeVariants(NotificationVariant.LUMO_WARNING);
+        getUI().ifPresent(ui -> ui.access(() -> Notification.show(message, 3000, Notification.Position.TOP_CENTER)
+                .addThemeVariants(NotificationVariant.LUMO_WARNING)));
+
     }
 
     private String mapApiFieldToFormField(String apiFieldName) {
