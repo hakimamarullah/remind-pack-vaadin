@@ -11,7 +11,7 @@ name: Build and publish docker image
 on:
   push:
     branches: [ "master" ]
-    tags: [ "v*" ]  # Trigger on version tags
+    tags: [ "v*" ]  # Trigger on tags
 
 jobs:
   push_to_registry:
