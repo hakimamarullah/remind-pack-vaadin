@@ -9,10 +9,14 @@ import com.starline.base.api.resi.dto.CourierInfo;
 import com.starline.base.api.resi.dto.ResiInfo;
 import com.starline.base.ui.component.AppVerticalLayout;
 import com.starline.base.ui.component.ConfirmDeleteDialog;
+import com.starline.base.ui.component.CountDownTask;
+import com.starline.base.ui.constant.StyleSheet;
 import com.starline.base.ui.view.MainLayout;
 import com.starline.security.AppUserInfo;
 import com.starline.security.CurrentUser;
 import com.starline.security.domain.UserId;
+import com.vaadin.flow.component.DetachEvent;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -20,8 +24,8 @@ import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
@@ -72,7 +76,10 @@ public class ResiDashboardView extends AppVerticalLayout {
     private final transient TextField trackingNumberField = new TextField("Tracking Number");
     private final transient TextField additionalValue = new TextField("Additional Value");
     private final transient ComboBox<CourierInfo> courierComboBox = new ComboBox<>("Courier");
+    private final transient Button btnRefreshList = new Button();
     private final transient Button addResiBtn = new Button(ADD_PACKAGE_TEXT);
+
+    private final transient CountDownTask countDownTask;
     private Binder<ResiData> resiDataBinder = new Binder<>();
     private final Grid<ResiInfo> resiGrid = new Grid<>();
     private final transient ResiData resiData = new ResiData();
@@ -83,7 +90,7 @@ public class ResiDashboardView extends AppVerticalLayout {
         this.appUserInfo = currentUser.require();
         this.resiService = resiService;
         this.courierService = courierService;
-
+        this.countDownTask = new CountDownTask(20);
 
         addClassName("dashboard-main");
         setSizeFull();
@@ -92,6 +99,8 @@ public class ResiDashboardView extends AppVerticalLayout {
 
         setupComponents();
         setupLayout();
+
+
         refreshResiList();
 
     }
@@ -103,6 +112,7 @@ public class ResiDashboardView extends AppVerticalLayout {
 
         public static final String JNE = "JNE";
     }
+
 
     private void setupComponents() {
         setupCourierComboBox();
@@ -200,21 +210,39 @@ public class ResiDashboardView extends AppVerticalLayout {
         Div sectionHeader = new Div();
         sectionHeader.addClassName("section-header");
 
-        H2 sectionTitle = new H2("Your Packages");
+        H4 sectionTitle = new H4("Your Packages");
         sectionTitle.addClassName("section-title");
 
-        Icon listIcon = VaadinIcon.LIST.create();
-        listIcon.addClassName("section-icon");
 
-        sectionHeader.add(listIcon, sectionTitle);
+        sectionHeader.add(sectionTitle);
+
+        // Btn Refresh
+        Div btnContainer = new Div();
+        btnRefreshList.getStyle().set(StyleSheet.CURSOR, StyleSheet.CURSOR_POINTER);
+        btnRefreshList.setIcon(VaadinIcon.REFRESH.create());
+        btnRefreshList.addClickListener(it -> handleManualRefreshList());
+        btnContainer.add(btnRefreshList);
+        btnContainer.addClassName("package-list-btn-container");
+        btnContainer.setWidthFull();
 
         // Grid container
         Div gridContainer = new Div();
         gridContainer.addClassName("grid-container");
         gridContainer.add(resiGrid);
 
-        packageListSection.add(sectionHeader, gridContainer);
+        packageListSection.add(sectionHeader, btnContainer, gridContainer);
         return packageListSection;
+    }
+
+    private void handleManualRefreshList() {
+        refreshResiList();
+        countDownTask.startCountdown(getCurrentUI().orElse(null), () -> {
+            btnRefreshList.setText(null);
+            btnRefreshList.setEnabled(true);
+        }, counter -> {
+            btnRefreshList.setText(counter + "s");
+            btnRefreshList.setEnabled(false);
+        });
     }
 
     private void setupCourierComboBox() {
@@ -224,6 +252,7 @@ public class ResiDashboardView extends AppVerticalLayout {
         courierComboBox.setAllowCustomValue(false);
         courierComboBox.setPageSize(5);
         courierComboBox.setItemsPageable(this::getCouriersInfo);
+        courierComboBox.setPageSize(5);
         courierComboBox.setItemLabelGenerator(CourierInfo::getName);
         courierComboBox.addValueChangeListener(it -> handleAdditionalValueInfo(it.getValue()));
         courierComboBox.addCustomValueSetListener(it -> trackingNumberField.setEnabled(false));
@@ -300,7 +329,7 @@ public class ResiDashboardView extends AppVerticalLayout {
                 if (dateTime == null) {
                     return "unknown";
                 }
-                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm a");
                 return dateTime.format(formatter);
             };
             Span text = new Span(dateTimeFormatter.apply(resiInfo.getLastCheckpointUpdate()));
@@ -328,7 +357,8 @@ public class ResiDashboardView extends AppVerticalLayout {
     }
 
     private void handleDeleteResi(ResiInfo resiInfo) {
-        new ConfirmDeleteDialog<ResiInfo>(() -> {})
+        new ConfirmDeleteDialog<ResiInfo>(() -> {
+        })
                 .show(resiInfo, ResiInfo::getTrackingNumber, this::callDeleteResi);
     }
 
@@ -390,11 +420,12 @@ public class ResiDashboardView extends AppVerticalLayout {
     }
 
     private void handleSuccessAddResi(ApiResponse<String> apiResponse) {
-        getUI().ifPresent(ui -> ui.access(() -> {
+        getCurrentUI().ifPresent(ui -> ui.access(() -> {
             showSuccessNotification(apiResponse.getData());
             resetForm();
             setFormEnabled(true);
             refreshResiList();
+            ui.push();
         }));
     }
 
@@ -518,7 +549,7 @@ public class ResiDashboardView extends AppVerticalLayout {
                 });
 
         if (Objects.isNull(courierInfo)) {
-            log.info("Courier is null. Disable tracking number field");
+            log.debug("Courier is null. Disable tracking number field");
             additionalValue.setVisible(false);
             trackingNumberField.setEnabled(false);
             trackingNumberField.setHelperText("Select a courier first to enable this field");
@@ -548,7 +579,19 @@ public class ResiDashboardView extends AppVerticalLayout {
 
     private void handleSuccessFetchResi(ApiResponse<List<ResiInfo>> apiResponse) {
         List<ResiInfo> resiInfoList = apiResponse.getData();
-        getUI().ifPresent(ui -> ui.access(() -> resiGrid.setItems(resiInfoList)));
+        getCurrentUI().ifPresent(it -> it.access(() -> {
+            resiGrid.setItems(resiInfoList);
+            it.push();
+        }));
+    }
+
+    private Optional<UI> getCurrentUI() {
+        UI ui = UI.getCurrent();
+        if (Objects.isNull(ui)) {
+            log.warn("Current UI is null. Trying to get from getUI() instead");
+            return getUI();
+        }
+        return Optional.of(ui);
     }
 
     private Long getCurrentUserId() {
@@ -557,6 +600,14 @@ public class ResiDashboardView extends AppVerticalLayout {
                 .map(UserId::toString)
                 .map(Long::valueOf)
                 .orElse(null);
+    }
+
+    @Override
+    protected void onDetach(DetachEvent detachEvent) {
+        super.onDetach(detachEvent);
+        if (!Objects.isNull(countDownTask)) {
+            countDownTask.shutdown();
+        }
     }
 
     @Data

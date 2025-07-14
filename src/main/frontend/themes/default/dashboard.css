@@ -55,7 +55,7 @@
 }
 
 .section-title {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 600;
     color: var(--text-primary);
     margin: 0;
@@ -135,6 +135,12 @@
 
 /* Button Styling */
 .button-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.package-list-btn-container {
     display: flex;
     justify-content: flex-end;
     margin-top: 1rem;
