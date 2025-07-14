@@ -1,19 +1,19 @@
 services:
   postgres:
     image: postgres:15
-    container_name: postgres
-    restart: always
+    deploy:
+      restart_policy:
+        condition: on-failure
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./pg_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
     networks:
       - remind-pack
   pg-backup:
     image: postgres:15
-    container_name: pg_backup
     depends_on:
       - postgres
     volumes:
@@ -24,9 +24,9 @@ services:
       bash -c "
         mkdir -p /backups &&
         while true; do
-          echo '[*] Starting backup at \$(date)' &&
-          pg_dumpall -h postgres -U ${POSTGRES_USER} | gzip > /backups/backup-$(date +%Y-%m-%d_%H-%M-%S).sql.gz &&
-          echo '[✓] Backup created at \$(date)' &&
+          echo '[*] Starting backup at $$(date)' &&
+          pg_dumpall -h postgres -U $$POSTGRES_USER | gzip > /backups/backup-$$(date +%Y-%m-%d_%H-%M-%S).sql.gz &&
+          echo '[✓] Backup created at $$(date)' &&
           find /backups -name '*.sql.gz' -mtime +7 -delete &&
           sleep 21600  # 6 hours in seconds
         done
@@ -36,8 +36,9 @@ services:
   
   starline-scc:
     image: hakimamarullah/starline-scc:v1.0.0
-    pull_policy: always
-    container_name: starline-scc
+    deploy:
+      restart_policy:
+        condition: on-failure
     environment:
       JAVA_OPTS: -DUSERNAME=${GITHUB_USERNAME} -DPERSONAL_ACCESS_TOKEN=${GITHUB_TOKEN} -Djdk.tls.client.protocols=TLSv1.2 -DSERVER_PORT=8888
       JAVA_ARGS: --spring.cloud.config.server.git.skipSslValidation=true
@@ -46,7 +47,9 @@ services:
 
   selenium-hub:
     image: selenium/hub:4.21.0
-    container_name: selenium-hub
+    deploy:
+      restart_policy:
+        condition: on-failure
     environment:
       - GRID_MAX_SESSION=16
       - GRID_BROWSER_TIMEOUT=30
@@ -56,7 +59,6 @@ services:
 
   chrome-node:
     image: selenium/node-chrome:4.21.0
-    shm_size: 2g
     depends_on:
       - selenium-hub
     environment:
@@ -67,13 +69,21 @@ services:
       - NODE_MAX_SESSION=4
     networks:
       - remind-pack
+    volumes:
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 2147483648
     deploy:
       replicas: 3
+      restart_policy:
+        condition: on-failure
 
   rabbitmq:
     image: rabbitmq:4-management
-    restart: on-failure
-    container_name: rabbitmq
+    deploy:
+      restart_policy:
+        condition: on-failure
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     environment:
@@ -84,8 +94,9 @@ services:
 
   starline-registry:
     image: hakimamarullah/starline-service-registry:v1.0.0
-    pull_policy: always
-    restart: always
+    deploy:
+      restart_policy:
+        condition: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=prod
     networks:
@@ -93,8 +104,9 @@ services:
 
   starline-gateway:
     image: hakimamarullah/starline-spring-gateway:v1.0.0
-    pull_policy: always
-    restart: always
+    deploy:
+      restart_policy:
+        condition: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_CLOUD_CONFIG_URI=http://starline-scc:8888
@@ -105,8 +117,6 @@ services:
 
   scrapper-svc:
     image: hakimamarullah/remind-pack-scrapper-svc:v1.0.0
-    pull_policy: always
-    restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_CLOUD_CONFIG_URI=http://starline-scc:8888
@@ -119,13 +129,16 @@ services:
       - starline-scc
     deploy:
       replicas: 2
+      restart_policy:
+        condition: on-failure
     networks:
       - remind-pack
 
   users-svc:
     image: hakimamarullah/remind-pack-users-svc:v1.0.0
-    pull_policy: always
-    restart: always
+    deploy:
+      restart_policy:
+        condition: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_CLOUD_CONFIG_URI=http://starline-scc:8888
@@ -137,12 +150,14 @@ services:
       - starline-scc
     networks:
       - remind-pack
+
   whatsapp-svc:
     image: hakimamarullah/starline-wapi:v1.0.0
-    pull_policy: always
-    restart: always
+    deploy:
+      restart_policy:
+        condition: on-failure
     volumes:
-      - ./.wwebjs_auth:/usr/src/app/.wwebjs_auth
+      - wwebjs_auth:/usr/src/app/.wwebjs_auth
     environment:
       EUREKA_INSTANCE_HOST: whatsapp-svc
       EUREKA_INSTANCE_IP: whatsapp-svc
@@ -152,14 +167,14 @@ services:
 
   resi-svc:
     image: hakimamarullah/remind-pack-resi-svc:v1.0.0
-    pull_policy: always
-    restart: always
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_CLOUD_CONFIG_URI=http://starline-scc:8888
       - LOG_FILE_PATH=/tmp/logs
     deploy:
       replicas: 2
+      restart_policy:
+        condition: on-failure
     volumes:
       - ./logs:/tmp/logs
     depends_on:
@@ -172,8 +187,9 @@ services:
 
   remind-pack-vaadin:
     image: hakimamarullah/remind-pack-vaadin:v1.0.0
-    pull_policy: always
-    restart: on-failure
+    deploy:
+      restart_policy:
+        condition: on-failure
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_APPLICATION_NAME=remind-pack-vaadin
@@ -189,7 +205,9 @@ services:
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
-    container_name: elasticsearch
+    deploy:
+      restart_policy:
+        condition: on-failure
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=true
@@ -204,7 +222,9 @@ services:
 
   kibana:
     image: docker.elastic.co/kibana/kibana:9.0.0
-    container_name: kibana
+    deploy:
+      restart_policy:
+        condition: on-failure
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - ELASTICSEARCH_SERVICEACCOUNTTOKEN=${SVC_ACCOUNT_TOKEN_KIBANA}  # This will be replaced
@@ -217,7 +237,9 @@ services:
 
   filebeat:
     image: docker.elastic.co/beats/filebeat:9.0.0
-    container_name: filebeat
+    deploy:
+      restart_policy:
+        condition: on-failure
     user: root
     command: >
       bash -c "
@@ -238,7 +260,9 @@ services:
       - remind-pack
   redis:
     image: redis:8.2-rc1-alpine
-    restart: on-failure
+    deploy:
+      restart_policy:
+        condition: on-failure
     volumes:
       - redis_data:/data
     command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
@@ -251,7 +275,9 @@ volumes:
   filebeat-data:
   redis_data:
   rabbitmq_data:
+  pg_data:
+  wwebjs_auth:
 
 networks:
   remind-pack:
-    driver: bridge
+    driver: overlay

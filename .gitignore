@@ -21,3 +21,5 @@ vite.generated.ts
 /docker/pg-backups/
 /docker/pg_data/
 /docker/pg_backups/
+/docker/pg_test/
+/docker/*.sh

@@ -1,0 +1,1 @@
+docker run --rm -v pgdata:/data -v $(pwd):/backup alpine tar czvf /backup/pgdata_backup.tar.gz -C /data .
