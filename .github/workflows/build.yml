@@ -11,6 +11,7 @@ name: Build and publish docker image
 on:
   push:
     branches: [ "master" ]
+    tags: [ "v*" ]  # Trigger on version tags like v1.0.0, v2.1.3, etc.
 
 jobs:
   push_to_registry:
@@ -20,6 +21,19 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.DOCKER_IMAGE_NAME }}
+          tags: |
+            # Use tag name for tagged releases
+            type=ref,event=tag
+            # Use 'latest' for master branch pushes
+            type=raw,value=latest,enable={{is_default_branch}}
+            # Use short SHA for branch pushes
+            type=sha,prefix={{branch}}-
 
       - name: Login to Docker Hub
         uses: docker/login-action@v3
@@ -33,4 +47,5 @@ jobs:
           context: .
           file: docker/Dockerfile
           push: true
-          tags: ${{ vars.DOCKER_IMAGE_NAME }}:${{ vars.DOCKER_IMAGE_TAG }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
