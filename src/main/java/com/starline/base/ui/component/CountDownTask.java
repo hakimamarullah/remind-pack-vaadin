@@ -48,13 +48,17 @@ public class CountDownTask {
 
         scheduledCountDown = scheduler.scheduleAtFixedRate(() -> {
             if (countdown[0].get() <= 0) {
-                Optional.ofNullable(ui).ifPresent(it -> it.access(action::run));
+                Optional.ofNullable(ui).ifPresent(it -> {
+                    it.access(action::run);
+                    it.push();
+                });
                 cancelScheduled();
 
             } else {
-                Optional.ofNullable(ui).ifPresent(it ->
-                        it.access(() -> pauseAction.accept(countdown[0].getAndDecrement()))
-                );
+                Optional.ofNullable(ui).ifPresent(it -> it.access(() -> {
+                    pauseAction.accept(countdown[0].getAndDecrement());
+                    it.push();
+                }));
             }
         }, 0, 1, TimeUnit.SECONDS);
     }

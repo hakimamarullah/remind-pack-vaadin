@@ -9,6 +9,7 @@ import com.starline.base.ui.component.CountDownTask;
 import com.starline.base.ui.constant.StyleSheet;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.Key;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H2;
@@ -41,6 +42,7 @@ import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 @PageTitle("Forgot Password")
 @AnonymousAllowed
@@ -174,7 +176,7 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
         // Check if user is already logged in
         if (authenticationContext.isAuthenticated()) {
             // Go back to previous page or home if no previous page
-            getUI().ifPresent(ui -> ui.getPage().getHistory().back());
+            getCurrentUI().ifPresent(ui -> ui.getPage().getHistory().back());
         }
     }
 
@@ -233,7 +235,7 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
 
 
     private void setFormEnabled(boolean enabled) {
-        getUI().ifPresent(ui -> ui.access(() -> {
+        getCurrentUI().ifPresent(ui -> ui.access(() -> {
             phoneField.setEnabled(enabled);
             otpField.setEnabled(enabled);
             newPasswordField.setEnabled(enabled);
@@ -276,7 +278,7 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
     }
 
     private void handleResetPasswordResponse(ApiResponse<String> response) {
-        getUI().ifPresent(ui -> ui.access(() -> {
+        getCurrentUI().ifPresent(ui -> ui.access(() -> {
             Notification.show(response.getMessage(), 3000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_SUCCESS);
             setFormEnabled(true);
@@ -287,7 +289,7 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
     private void handleResetPasswordError(Throwable ex) {
         WebClientLoggingFilter.ApiClientException exception = (WebClientLoggingFilter.ApiClientException) ex;
         if (HttpStatus.BAD_REQUEST.value() == exception.getHttpStatusCode()) {
-            getUI().ifPresent(ui -> ui.access(() -> handleFieldErrors(exception.getFieldErrors())));
+            getCurrentUI().ifPresent(ui -> ui.access(() -> handleFieldErrors(exception.getFieldErrors())));
             return;
         }
         setFormEnabled(true);
@@ -295,7 +297,7 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
     }
 
     private void show4xxError(String message) {
-        getUI().ifPresent(ui -> ui.access(() -> Notification.show(message, 3000, Notification.Position.TOP_CENTER)
+        getCurrentUI().ifPresent(ui -> ui.access(() -> Notification.show(message, 3000, Notification.Position.TOP_CENTER)
                 .addThemeVariants(NotificationVariant.LUMO_WARNING)));
     }
 
@@ -329,14 +331,17 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
     }
 
     private void clearFieldErrors() {
-        phoneField.setErrorMessage(null);
-        phoneField.setInvalid(false);
-        otpField.setErrorMessage(null);
-        otpField.setInvalid(false);
-        newPasswordField.setErrorMessage(null);
-        newPasswordField.setInvalid(false);
-        confirmPasswordField.setErrorMessage(null);
-        confirmPasswordField.setInvalid(false);
+        getCurrentUI().ifPresent(ui -> ui.access(() -> {
+            phoneField.setErrorMessage(null);
+            phoneField.setInvalid(false);
+            otpField.setErrorMessage(null);
+            otpField.setInvalid(false);
+            newPasswordField.setErrorMessage(null);
+            newPasswordField.setInvalid(false);
+            confirmPasswordField.setErrorMessage(null);
+            confirmPasswordField.setInvalid(false);
+            ui.push();
+        }));
     }
 
     private void validateAndUpdateResetButton() {
@@ -359,7 +364,7 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
 
     private void startResendCountdown() {
         countDownTask.startCountdown(
-                getUI().orElse(null),
+                getCurrentUI().orElse(null),
                 () -> {
                     sendOtpBtn.setText("Resend OTP");
                     sendOtpBtn.setEnabled(true);
@@ -370,6 +375,16 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
                 }
         );
 
+    }
+
+
+    private Optional<UI> getCurrentUI() {
+        UI ui = UI.getCurrent();
+        if (Objects.isNull(ui)) {
+            log.warn("Current UI is null. Trying to get from getUI() instead");
+            return getUI();
+        }
+        return Optional.of(ui);
     }
 
     @Override
