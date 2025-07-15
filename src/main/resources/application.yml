@@ -1,5 +1,8 @@
 server:
   port: ${PORT:8080}
+  servlet:
+    session:
+      timeout: 360m
 
 spring:
   profiles:
@@ -29,7 +32,8 @@ logging:
 
 vaadin:
   allowed-packages: com.vaadin,org.vaadin,com.flowingcode,com.starline
-  launch-browser: true
+  launch-browser: false
+  heartbeatInterval: 300
 
 
 url:
