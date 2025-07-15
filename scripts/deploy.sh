@@ -27,6 +27,7 @@ docker pull "$IMAGE_NAME"
 echo "Updating service..."
 docker service update \
   --image "$IMAGE_NAME" \
+  --update-order start-first \
   --update-parallelism 1 \
   --update-delay 10s \
   --update-failure-action rollback \
@@ -37,55 +38,4 @@ docker service update \
   --rollback-monitor 30s \
   "$SERVICE_NAME"
 
-# Function to check service update status
-check_service_status() {
-  local service_name=$1
-  local max_attempts=30
-  local attempt=1
-
-  while [ $attempt -le $max_attempts ]; do
-    echo "Checking service status (attempt $attempt/$max_attempts)..."
-
-    # Get service update status
-    update_status=$(docker service ps "$service_name" --format "table {{.ID}}\t{{.Name}}\t{{.Image}}\t{{.CurrentState}}\t{{.Error}}" --no-trunc)
-    echo "$update_status"
-
-    # Check if update is complete
-    running_count=$(docker service ps "$service_name" --filter "desired-state=running" --format "{{.CurrentState}}" | grep -c "Running")
-    total_replicas=$(docker service inspect "$service_name" --format "{{.Spec.Replicas}}")
-
-    if [ "$running_count" -eq "$total_replicas" ]; then
-      echo "Service update completed successfully!"
-      return 0
-    fi
-
-    # Check for failed tasks
-    failed_count=$(docker service ps "$service_name" --filter "desired-state=running" --format "{{.CurrentState}}" | grep -c "Failed" || echo "0")
-    if [ "$failed_count" -gt 0 ]; then
-      echo "Service update failed!"
-      return 1
-    fi
-
-    sleep 10
-    attempt=$((attempt + 1))
-  done
-
-  echo "Service update timed out!"
-  return 1
-}
-
-# Wait for the service to be updated
-echo "Waiting for service update to complete..."
-if check_service_status "$SERVICE_NAME"; then
-  echo "Deployment successful!"
-
-  # Clean up old images (keep last 3 versions)
-  echo "Cleaning up old images..."
-  BASE_IMAGE=$(echo "$IMAGE_NAME" | cut -d':' -f1)
-  docker images "$BASE_IMAGE" --format "{{.Tag}}" | grep -v "latest" | sort -V | head -n -3 | xargs -r -I {} docker rmi "$BASE_IMAGE:{}" || true
-
-  echo "Deployment completed successfully!"
-else
-  echo "Deployment failed!"
-  exit 1
-fi
+echo "Deployment completed."
