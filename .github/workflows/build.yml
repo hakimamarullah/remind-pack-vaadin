@@ -18,9 +18,6 @@ jobs:
     name: Build and Push Docker image
     environment: production
     runs-on: ubuntu-latest
-    outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
-      image_digest: ${{ steps.build.outputs.digest }}
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -53,6 +50,25 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Save deployment info
+        run: |
+          # Save the deployment info to a file for the next job
+          echo "IMAGE_NAME=${{ vars.DOCKER_IMAGE_NAME }}" >> deployment.env
+          echo "SERVICE_NAME=${{ vars.SERVICE_NAME }}" >> deployment.env
+          
+          # Extract the primary tag (first line)
+          PRIMARY_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
+          echo "IMAGE_TAG=$PRIMARY_TAG" >> deployment.env
+          
+          echo "Deployment info:"
+          cat deployment.env
+
+      - name: Upload deployment info
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-info
+          path: deployment.env
+
   deploy:
     name: Deploy to VPS
     needs: build_and_push
@@ -61,6 +77,21 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
+
+      - name: Download deployment info
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-info
+
+      - name: Copy deployment info to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "deployment.env"
+          target: "/tmp/"
 
       - name: Copy deployment script to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -83,5 +114,11 @@ jobs:
             # Make script executable
             chmod +x /tmp/scripts/deploy.sh
             
+            # Load deployment info from artifact
+            source /tmp/deployment.env
+            
+            echo "Deploying with image: $IMAGE_TAG"
+            echo "Service: $SERVICE_NAME"
+            
             # Run deployment script
-            /tmp/scripts/deploy.sh "${{ needs.build_and_push.outputs.image_tag }}" "${{ vars.SERVICE_NAME }}"
+            /tmp/scripts/deploy.sh "$IMAGE_TAG" "$SERVICE_NAME"
