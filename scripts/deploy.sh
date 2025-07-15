@@ -4,6 +4,7 @@
 # Usage: ./deploy.sh <image_name> <service_name>
 
 set -e  # Exit on any error
+set -a  # Export all variables
 
 # Check if required arguments are provided
 if [ $# -ne 2 ]; then
@@ -24,6 +25,9 @@ echo "Pulling new image..."
 docker pull "$IMAGE_NAME"
 
 # Update the service with rolling update
+echo "Exporting environment variables..."
+source /home/administrator/starline/.env.local
+
 echo "Updating service..."
 docker service update \
   --image "$IMAGE_NAME" \
