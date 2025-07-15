@@ -7,6 +7,7 @@ import com.starline.base.api.users.RegistrationService;
 import com.starline.base.api.users.dto.RegisterUserRequest;
 import com.starline.base.ui.component.CountDownTask;
 import com.vaadin.flow.component.DetachEvent;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H2;
@@ -32,6 +33,7 @@ import com.vaadin.flow.server.auth.AnonymousAllowed;
 import com.vaadin.flow.spring.security.AuthenticationContext;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 
 import java.util.ArrayList;
@@ -41,6 +43,7 @@ import java.util.Optional;
 
 @PageTitle("Register")
 @AnonymousAllowed
+@Slf4j
 public class RegisterUserView extends Main implements BeforeEnterObserver {
 
     private final transient RegistrationService registrationService;
@@ -196,7 +199,6 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
         binder.setBean(userRegistration);
     }
 
-    @SuppressWarnings("unchecked")
     private void handleRegister() {
         try {
             binder.writeBean(userRegistration);
@@ -231,7 +233,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
     private void registrationSuccessHandler(ApiResponse<String> apiResponse) {
         // Success case
         if (apiResponse.getCode() == HttpStatus.CREATED.value()) {
-            getUI().ifPresent(ui -> ui.access(() -> {
+            getCurrentUI().ifPresent(ui -> ui.access(() -> {
                 Notification.show("Registration successful!", 3000, Notification.Position.TOP_CENTER)
                         .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
                 ui.navigate("/login");
@@ -259,12 +261,12 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
                 String mappedFieldName = mapApiFieldToFormField(fieldName);
 
                 // Show the error directly on the field
-                getUI().ifPresent(ui -> ui.access(() -> showFieldError(mappedFieldName, errorMessage)));
+                getCurrentUI().ifPresent(ui -> ui.access(() -> showFieldError(mappedFieldName, errorMessage)));
 
             });
 
             // Show general error message
-            getUI().ifPresent(ui -> ui.access(() -> Notification.show("Please fix the highlighted errors and try again.", 3000,
+            getCurrentUI().ifPresent(ui -> ui.access(() -> Notification.show("Please fix the highlighted errors and try again.", 3000,
                             Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR)));
             return;
@@ -273,8 +275,17 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
         show4xxError(ex.getErrorMessage());
     }
 
+    private Optional<UI> getCurrentUI() {
+        UI ui = UI.getCurrent();
+        if (Objects.isNull(ui)) {
+            log.warn("Current UI is null. Trying to get from getUI() instead");
+            return getUI();
+        }
+        return Optional.of(ui);
+    }
+
     private void setFormEnabled(boolean enabled) {
-        getUI().ifPresent(ui -> ui.access(() -> {
+        getCurrentUI().ifPresent(ui -> ui.access(() -> {
             phoneField.setEnabled(enabled);
             passwordField.setEnabled(enabled);
             confirmPasswordField.setEnabled(enabled);
@@ -292,7 +303,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
     }
 
     private void show4xxError(String message) {
-        getUI().ifPresent(ui -> ui.access(() -> Notification.show(message, 3000, Notification.Position.TOP_CENTER)
+        getCurrentUI().ifPresent(ui -> ui.access(() -> Notification.show(message, 3000, Notification.Position.TOP_CENTER)
                 .addThemeVariants(NotificationVariant.LUMO_WARNING)));
 
     }
@@ -307,7 +318,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
 
     private void clearFieldErrors() {
         // Clear error states from all form fields
-        getUI().ifPresent(ui -> ui.access(() -> {
+        getCurrentUI().ifPresent(ui -> ui.access(() -> {
             phoneField.setInvalid(false);
             phoneField.setErrorMessage(null);
             passwordField.setInvalid(false);
@@ -355,7 +366,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
 
     private void startResendCountdown() {
         countDownTask.startCountdown(
-                getUI().orElse(null),
+                getCurrentUI().orElse(null),
                 () -> {
                     sendOtpBtn.setText("Resend OTP");
                     sendOtpBtn.setEnabled(true);
