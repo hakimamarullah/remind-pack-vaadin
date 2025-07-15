@@ -220,22 +220,36 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
                             error -> {
                                 if (error instanceof WebClientLoggingFilter.ApiClientException ex) {
                                     handleRegistrationError(ex);
+                                    return;
                                 }
+                                handleUnexpectedError(error);
                             }
                     );
 
         } catch (ValidationException e) {
             Notification.show("Please make sure all fields are valid.", 3000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
+        } catch (Exception e) {
+            handleUnexpectedError(e);
         }
+    }
+
+    private void handleUnexpectedError(Throwable ex) {
+        log.warn("Error registering user: {}", ex.getMessage());
+        getCurrentUI().ifPresent(ui -> ui.access(() ->
+                Notification.show("Something went wrong. Please try again later!", 3000, Notification.Position.TOP_CENTER)
+        ));
+        setFormEnabled(true);
     }
 
     private void registrationSuccessHandler(ApiResponse<String> apiResponse) {
         // Success case
+        setFormEnabled(true);
         if (apiResponse.getCode() == HttpStatus.CREATED.value()) {
             getCurrentUI().ifPresent(ui -> ui.access(() -> {
                 Notification.show("Registration successful!", 3000, Notification.Position.TOP_CENTER)
                         .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
+                ui.push();
                 ui.navigate("/login");
             }));
         }
@@ -266,7 +280,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
             });
 
             // Show general error message
-            getCurrentUI().ifPresent(ui -> ui.access(() -> Notification.show("Please fix the highlighted errors and try again.", 3000,
+            getCurrentUI().ifPresent(ui -> ui.access(() -> Notification.show("Please fix the highlighted errors and try again.", 2000,
                             Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR)));
             return;
@@ -303,7 +317,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
     }
 
     private void show4xxError(String message) {
-        getCurrentUI().ifPresent(ui -> ui.access(() -> Notification.show(message, 3000, Notification.Position.TOP_CENTER)
+        getCurrentUI().ifPresent(ui -> ui.access(() -> Notification.show(message, 2000, Notification.Position.TOP_CENTER)
                 .addThemeVariants(NotificationVariant.LUMO_WARNING)));
 
     }

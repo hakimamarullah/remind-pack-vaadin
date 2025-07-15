@@ -39,6 +39,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 
 import java.util.List;
 import java.util.Objects;
@@ -274,6 +275,8 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
             Notification.show("Please fix the validation errors", 3000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_WARNING);
             setFormEnabled(true);
+        } catch (Exception e) {
+            handleResetPasswordError(e);
         }
     }
 
@@ -287,13 +290,32 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
     }
 
     private void handleResetPasswordError(Throwable ex) {
-        WebClientLoggingFilter.ApiClientException exception = (WebClientLoggingFilter.ApiClientException) ex;
-        if (HttpStatus.BAD_REQUEST.value() == exception.getHttpStatusCode()) {
-            getCurrentUI().ifPresent(ui -> ui.access(() -> handleFieldErrors(exception.getFieldErrors())));
-            return;
+        try {
+            if (ex instanceof WebClientRequestException) {
+                getCurrentUI().ifPresent(ui -> ui.access(() -> {
+                    Notification.show("Something went wrong. Please try again later!", 3000, Notification.Position.TOP_CENTER);
+                    setFormEnabled(true);
+                }));
+                return;
+            }
+            WebClientLoggingFilter.ApiClientException exception = (WebClientLoggingFilter.ApiClientException) ex;
+            if (HttpStatus.BAD_REQUEST.value() == exception.getHttpStatusCode()) {
+                getCurrentUI().ifPresent(ui -> ui.access(() -> handleFieldErrors(exception.getFieldErrors())));
+                return;
+            }
+            setFormEnabled(true);
+            show4xxError(exception.getErrorMessage());
+        } catch (Exception e) {
+            handleUnexpectedErrorResetPassword(e);
         }
+    }
+
+    private void handleUnexpectedErrorResetPassword(Throwable ex) {
+        log.warn("Error resetting password: {}", ex.getMessage());
+        getCurrentUI().ifPresent(ui -> ui.access(() ->
+                Notification.show("Something went wrong. Please try again later!", 3000, Notification.Position.TOP_CENTER)
+        ));
         setFormEnabled(true);
-        show4xxError(exception.getErrorMessage());
     }
 
     private void show4xxError(String message) {
