@@ -12,6 +12,18 @@ services:
       - pg_data:/var/lib/postgresql/data
     networks:
       - remind-pack
+  mongo:
+    image: mongo:7
+    deploy:
+      restart_policy:
+        condition: on-failure
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - remind-pack
   pg-backup:
     image: postgres:15
     depends_on:
@@ -156,12 +168,13 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
-    volumes:
-      - wwebjs_auth:/usr/src/app/.wwebjs_auth
     environment:
       EUREKA_INSTANCE_HOST: whatsapp-svc
       EUREKA_INSTANCE_IP: whatsapp-svc
       EUREKA_SERVER_HOST: starline-registry
+      MONGO_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/remind_pack?authSource=admin
+    depends_on:
+      - mongo
     networks:
       - remind-pack
 
@@ -276,7 +289,7 @@ volumes:
   redis_data:
   rabbitmq_data:
   pg_data:
-  wwebjs_auth:
+  mongo_data:
 
 networks:
   remind-pack:

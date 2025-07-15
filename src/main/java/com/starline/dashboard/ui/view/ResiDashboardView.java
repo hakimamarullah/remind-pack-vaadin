@@ -44,6 +44,7 @@ import jakarta.annotation.security.PermitAll;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -69,6 +70,9 @@ public class ResiDashboardView extends AppVerticalLayout {
     private static final String GRID_CELL_ICON_CSS_CLASS = "grid-cell-icon";
     private static final String GRID_CELL_TEXT_CSS_CLASS = "grid-cell-text";
     private static final String ADD_PACKAGE_TEXT = "Add Package";
+
+    @Value("${app.max-resi-count:5}")
+    private int MAX_RESI_COUNT;
 
     private final transient AppUserInfo appUserInfo;
     private final transient ResiService resiService;
@@ -393,6 +397,14 @@ public class ResiDashboardView extends AppVerticalLayout {
             return;
         }
 
+        int trackingCount = resiGrid.getListDataView().getItemCount();
+        if (trackingCount >= MAX_RESI_COUNT) {
+            String message = String.format("You have reached the maximum number of packages: %s%%nConsider deleting some packages before adding more!", MAX_RESI_COUNT);
+            showErrorNotification(message);
+            return;
+        }
+
+
         Long courierId = Optional.ofNullable(courierComboBox.getValue()).map(CourierInfo::getId).orElse(null);
         String trackingNumber = resiData.getTrackingNumber();
 
@@ -562,7 +574,7 @@ public class ResiDashboardView extends AppVerticalLayout {
     }
 
     private void showErrorNotification(String message) {
-        Notification notification = Notification.show(message, 5000, Notification.Position.TOP_CENTER);
+        Notification notification = Notification.show(message, 3000, Notification.Position.TOP_CENTER);
         notification.addThemeVariants(NotificationVariant.LUMO_WARNING);
     }
 
@@ -574,13 +586,21 @@ public class ResiDashboardView extends AppVerticalLayout {
         }
 
         resiService.getResiByUserId(getCurrentUserId())
-                .subscribe(this::handleSuccessFetchResi);
+                .subscribe(this::handleSuccessFetchResi, this::handleErrorFetchResi);
     }
 
     private void handleSuccessFetchResi(ApiResponse<List<ResiInfo>> apiResponse) {
         List<ResiInfo> resiInfoList = apiResponse.getData();
         getCurrentUI().ifPresent(it -> it.access(() -> {
             resiGrid.setItems(resiInfoList);
+            it.push();
+        }));
+    }
+
+    private void handleErrorFetchResi(Throwable throwable) {
+        log.warn("Failed to fetch resi list: {}", throwable.getMessage());
+        getCurrentUI().ifPresent(it -> it.access(() -> {
+            showErrorNotification("Failed to fetch resi list");
             it.push();
         }));
     }

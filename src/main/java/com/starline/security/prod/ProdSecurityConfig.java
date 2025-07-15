@@ -1,6 +1,7 @@
 package com.starline.security.prod;
 
 
+import com.starline.base.api.utils.CommonUtils;
 import com.starline.base.ui.view.HomePage;
 import com.starline.register.ui.view.RegisterUserView;
 import com.starline.resetpassword.ui.view.ForgotPasswordView;
@@ -50,7 +51,8 @@ public class ProdSecurityConfig {
 
     @Bean
     UserDetailsService userDetailsService() {
-        return username -> userRepository.findByMobilePhone(username).orElseThrow(() -> new UsernameNotFoundException(username));
+        return username -> userRepository.findByMobilePhone(CommonUtils.normalizePhoneNumber(username))
+                .orElseThrow(() -> new UsernameNotFoundException(username));
     }
 
     @Bean
