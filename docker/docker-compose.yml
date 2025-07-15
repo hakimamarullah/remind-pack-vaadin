@@ -168,8 +168,6 @@ services:
     deploy:
       restart_policy:
         condition: on-failure
-#    volumes:
-#      - wwebjs_auth:/usr/src/app/.wwebjs_auth
     environment:
       EUREKA_INSTANCE_HOST: whatsapp-svc
       EUREKA_INSTANCE_IP: whatsapp-svc
