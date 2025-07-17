@@ -49,6 +49,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -426,19 +427,21 @@ public class ResiDashboardView extends AppVerticalLayout {
         addResiBtn.setText("Adding...");
         addResiBtn.setIcon(VaadinIcon.SPINNER.create());
 
-        resiService.addResi(payload)
-                .subscribe(this::handleSuccessAddResi, this::handleAddResiBadRequestError);
+        try {
+            var apiResponse = resiService.addResi(payload)
+                    .blockOptional(Duration.ofSeconds(40));
+            apiResponse.ifPresent(this::handleSuccessAddResi);
+        } catch (WebClientLoggingFilter.ApiClientException ex) {
+            handleAddResiBadRequestError(ex);
+        }
 
     }
 
     private void handleSuccessAddResi(ApiResponse<String> apiResponse) {
-        getCurrentUI().ifPresent(ui -> ui.access(() -> {
-            showSuccessNotification(apiResponse.getData());
-            resetForm();
-            setFormEnabled(true);
-            refreshResiList();
-            ui.push();
-        }));
+        showSuccessNotification(apiResponse.getData());
+        resetForm();
+        setFormEnabled(true);
+        refreshResiList();
     }
 
     private void handleAddResiBadRequestError(Throwable throwable) {

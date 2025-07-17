@@ -36,6 +36,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -215,20 +216,15 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
                     .build();
 
             setFormEnabled(false);
-            registrationService.registerUser(payload)
-                    .subscribe(this::registrationSuccessHandler,
-                            error -> {
-                                if (error instanceof WebClientLoggingFilter.ApiClientException ex) {
-                                    handleRegistrationError(ex);
-                                    return;
-                                }
-                                handleUnexpectedError(error);
-                            }
-                    );
+            var apiResponse = registrationService.registerUser(payload).blockOptional(Duration.ofSeconds(30));
+            apiResponse.ifPresent(this::registrationSuccessHandler);
 
         } catch (ValidationException e) {
             Notification.show("Please make sure all fields are valid.", 3000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
+
+        } catch (WebClientLoggingFilter.ApiClientException e) {
+            handleRegistrationError(e);
         } catch (Exception e) {
             handleUnexpectedError(e);
         }

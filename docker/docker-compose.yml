@@ -164,7 +164,7 @@ services:
       - remind-pack
 
   whatsapp-svc:
-    image: hakimamarullah/starline-wapi:v1.0.0
+    image: hakimamarullah/starline-wapi:latest
     deploy:
       restart_policy:
         condition: on-failure
@@ -179,7 +179,7 @@ services:
       - remind-pack
 
   resi-svc:
-    image: hakimamarullah/remind-pack-resi-svc:v1.0.0
+    image: hakimamarullah/remind-pack-resi-svc:latest
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_CLOUD_CONFIG_URI=http://starline-scc:8888
@@ -199,7 +199,7 @@ services:
       - remind-pack
 
   remind-pack-vaadin:
-    image: hakimamarullah/remind-pack-vaadin:v1.0.0
+    image: hakimamarullah/remind-pack-vaadin:latest
     deploy:
       restart_policy:
         condition: on-failure
@@ -210,9 +210,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
       - JAVA_OPTS=-Dlogging.level.com.starline.base.api.config.WebClientLoggingFilter=DEBUG -Dspring.datasource.url=jdbc:postgresql://postgres:5432/micro?currentSchema=user_svc -Durl.svc.users=http://starline-gateway:8082/remind-pack-users-svc -Durl.svc.resi=http://starline-gateway:8082/remind-pack-resi-svc
     ports:
-      - mode: host
-        target: 8080
-        published: 8080
+      - "127.0.0.1:8080:8080"
     depends_on:
       - postgres
     networks:
@@ -229,9 +227,7 @@ services:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - ES_JAVA_OPTS=-Xms1g -Xmx1g
     ports:
-      - mode: host
-        target: 9200
-        published: 9200
+      - "127.0.0.1:9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
     networks:
@@ -246,9 +242,7 @@ services:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - ELASTICSEARCH_SERVICEACCOUNTTOKEN=${SVC_ACCOUNT_TOKEN_KIBANA}  # This will be replaced
     ports:
-      - mode: host
-        target: 5601
-        published: 5601
+      - "127.0.0.1:5601:5601"
     depends_on:
       - elasticsearch
     networks:
