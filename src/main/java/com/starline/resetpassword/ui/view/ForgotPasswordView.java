@@ -41,6 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -268,9 +269,8 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
                     .confirmNewPassword(newPassword)
                     .build();
             setFormEnabled(false);
-            passwordResetService.resetPassword(payload)
-                    .subscribe(this::handleResetPasswordResponse, this::handleResetPasswordError);
-
+            var apiResponse = passwordResetService.resetPassword(payload).blockOptional(Duration.ofSeconds(40));
+            apiResponse.ifPresent(this::handleResetPasswordResponse);
         } catch (ValidationException e) {
             Notification.show("Please fix the validation errors", 3000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_WARNING);
@@ -362,7 +362,6 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
             newPasswordField.setInvalid(false);
             confirmPasswordField.setErrorMessage(null);
             confirmPasswordField.setInvalid(false);
-            ui.push();
         }));
     }
 
