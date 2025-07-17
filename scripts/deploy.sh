@@ -22,6 +22,7 @@ echo "Service: $SERVICE_NAME"
 
 cd /home/administrator/starline
 
+
 echo "Run compose"
 pwd
 docker-compose --env-file .env.local up -d "$SERVICE_NAME"

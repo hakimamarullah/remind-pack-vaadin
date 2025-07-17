@@ -222,6 +222,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
         } catch (ValidationException e) {
             Notification.show("Please make sure all fields are valid.", 3000, Notification.Position.TOP_CENTER)
                     .addThemeVariants(NotificationVariant.LUMO_ERROR);
+
         } catch (WebClientLoggingFilter.ApiClientException e) {
             handleRegistrationError(e);
         } catch (Exception e) {
@@ -244,6 +245,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
             getCurrentUI().ifPresent(ui -> ui.access(() -> {
                 Notification.show("Registration successful!", 3000, Notification.Position.TOP_CENTER)
                         .addThemeVariants(NotificationVariant.LUMO_PRIMARY);
+                ui.push();
                 ui.navigate("/login");
             }));
         }
