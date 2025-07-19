@@ -43,3 +43,4 @@ vaadin:
 url:
   svc:
     users: http://localhost:8081
+    subscriptions: http://subscriptions-svc

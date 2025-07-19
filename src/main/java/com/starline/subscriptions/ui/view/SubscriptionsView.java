@@ -1,7 +1,20 @@
 package com.starline.subscriptions.ui.view;
 
+import com.starline.base.api.config.WebClientLoggingFilter;
+import com.starline.base.api.dto.ApiResponse;
+import com.starline.base.api.subscriptions.SubscriptionService;
+import com.starline.base.api.subscriptions.dto.payment.CreateOrderRequest;
+import com.starline.base.api.subscriptions.dto.payment.OrderSummary;
+import com.starline.base.api.subscriptions.dto.plan.PlanInfo;
+import com.starline.base.api.subscriptions.dto.subscriptions.SubscriptionInfo;
+import com.starline.base.api.subscriptions.dto.subscriptions.SubscriptionStatus;
 import com.starline.base.ui.component.AppVerticalLayout;
+import com.starline.base.ui.component.LoadingBar;
 import com.starline.base.ui.view.MainLayout;
+import com.starline.base.utils.Formatter;
+import com.starline.security.AppUserInfo;
+import com.starline.security.CurrentUser;
+import com.starline.security.domain.UserId;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -17,61 +30,103 @@ import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.Icon;
 import com.vaadin.flow.component.icon.VaadinIcon;
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Menu;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.PermitAll;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.HttpStatus;
 
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Route(value = "subscriptions", layout = MainLayout.class)
 @PageTitle("Subscriptions | RemindPack")
 @Menu(title = "Subscriptions", icon = "vaadin:credit-card", order = 2)
-@PermitAll
 @CssImport("./themes/default/subscriptions-view.css")
-public class SubscriptionsView extends AppVerticalLayout {
+@PermitAll
+@Slf4j
+public class SubscriptionsView extends AppVerticalLayout implements BeforeEnterObserver {
 
-    private final List<PlanDto> dummyPlans = List.of(
-            new PlanDto("basic", "Basic", "Perfect for personal reminders and individual use.", 15000,
-                    List.of("Up to 10 reminders/month", "Email notifications", "Basic support", "Mobile app access")),
-            new PlanDto("pro", "Pro", "Ideal for small teams and recurring deliveries.", 35000,
-                    List.of("Up to 100 reminders/month", "SMS & Email notifications", "Priority support", "Team collaboration", "Advanced analytics")),
-            new PlanDto("enterprise", "Enterprise", "For large scale operations with full support.", 75000,
-                    List.of("Unlimited reminders", "All notification types", "24/7 dedicated support", "Custom integrations", "Advanced reporting", "SLA guarantee"))
-    );
+    private final transient SubscriptionService subscriptionService;
+    private final transient AppUserInfo appUserInfo;
 
-    private final List<SubscriptionDto> dummySubscriptions = List.of(
-            new SubscriptionDto("Pro", "active", "", "2024-01-15", "2024-12-31", "monthly"),
-            new SubscriptionDto("Enterprise", "pending", "https://midtrans.example.com/pay/abc123", "", "", "yearly")
-    );
+    private final VerticalLayout mainContent = new VerticalLayout();
 
-    public SubscriptionsView() {
+    private Component subscriptionSection = new VerticalLayout();
+
+
+    public SubscriptionsView(CurrentUser currentUser, SubscriptionService subscriptionService) {
         super("Subscriptions");
+        this.appUserInfo = currentUser.require();
+        this.subscriptionService = subscriptionService;
+
         setSizeFull();
         setPadding(false);
         setSpacing(false);
         addClassName("subscriptions-view");
 
-        // Create main content wrapper
-        VerticalLayout mainContent = new VerticalLayout();
         mainContent.setSizeFull();
         mainContent.setPadding(false);
         mainContent.setSpacing(false);
-        mainContent.addClassName("main-content");
 
-        mainContent.add(createPlansSection(), createSubscriptionSummary());
+
+        // Fetch data
+        UI ui = UI.getCurrent();
+
+        LoadingBar loadingBar = new LoadingBar();
+        mainContent.addComponentAsFirst(loadingBar);
+        loadingBar.start();
+
+        subscriptionService.getAvailablePlans()
+                .map(ApiResponse::getData)
+                .defaultIfEmpty(Collections.emptyList())
+                .map(plans -> plans.stream().map(this::toPlanDto).toList())
+                .doOnNext(planDtos -> {
+                    if (ui != null) {
+                        ui.access(() -> mainContent.replace(loadingBar, createPlansSection(planDtos)));
+                    }
+                }).subscribe();
+
+        subscriptionService.getSubscriptions(getCurrentUserId())
+                .map(ApiResponse::getData)
+                .defaultIfEmpty(Collections.emptyList())
+                .map(subs -> subs.stream().map(this::toSubscriptionDto).toList())
+                .doOnNext(subDtos -> {
+                    if (ui != null) {
+                        subscriptionSection = createSubscriptionSummary(subDtos);
+                        ui.access(() -> mainContent.addComponentAtIndex(1, subscriptionSection));
+                    }
+                }).subscribe();
         add(mainContent);
     }
 
+    private void refreshSubscriptionSection(UI ui) {
+        subscriptionService.getSubscriptions(getCurrentUserId())
+                .map(ApiResponse::getData)
+                .defaultIfEmpty(Collections.emptyList())
+                .map(subs -> subs.stream().map(this::toSubscriptionDto).toList())
+                .doOnNext(subDtos -> {
+                    if (ui != null) {
+                        var tempComponent = createSubscriptionSummary(subDtos);
+                        ui.access(() -> mainContent.replace(subscriptionSection, tempComponent));
+                        subscriptionSection = tempComponent;
+                    }
+                }).subscribe();
+    }
 
 
-    private Component createPlansSection() {
+    private Component createPlansSection(List<PlanDto> plans) {
         VerticalLayout section = new VerticalLayout();
         section.addClassName("plans-section");
         section.setWidthFull();
@@ -87,10 +142,9 @@ public class SubscriptionsView extends AppVerticalLayout {
         cardsLayout.setAlignItems(FlexComponent.Alignment.STRETCH);
         cardsLayout.setFlexWrap(FlexLayout.FlexWrap.WRAP);
 
-        for (int i = 0; i < dummyPlans.size(); i++) {
-            PlanDto plan = dummyPlans.get(i);
-            Component card = createPlanCard(plan, i == 1); // Mark middle plan as popular
-            cardsLayout.add(card);
+        for (int i = 0; i < plans.size(); i++) {
+            PlanDto plan = plans.get(i);
+            cardsLayout.add(createPlanCard(plan, i == 1));
         }
 
         section.add(sectionTitle, cardsLayout);
@@ -100,16 +154,13 @@ public class SubscriptionsView extends AppVerticalLayout {
     private Component createPlanCard(PlanDto plan, boolean isPopular) {
         Card card = new Card();
         card.addClassName("plan-card");
-        if (isPopular) {
-            card.addClassName("popular-plan");
-        }
+        if (isPopular) card.addClassName("popular-plan");
 
         VerticalLayout content = new VerticalLayout();
         content.addClassName("plan-content");
         content.setPadding(true);
         content.setSpacing(true);
 
-        // Popular badge
         if (isPopular) {
             Div badge = new Div();
             badge.addClassName("popular-badge");
@@ -122,68 +173,65 @@ public class SubscriptionsView extends AppVerticalLayout {
         planName.addClassName("plan-name");
         content.add(planName);
 
+
         // Plan description
         Paragraph description = new Paragraph(plan.description());
         description.addClassName("plan-description");
         content.add(description);
 
-        // Price
         Div priceSection = new Div();
         priceSection.addClassName("price-section");
 
-        Span priceAmount = new Span(formatIDR(plan.price()));
+        Span priceAmount = new Span(plan.price());
         priceAmount.addClassName("price-amount");
 
-        Span priceUnit = new Span("/month");
+        Span priceUnit = new Span("/" + plan.planCycle());
         priceUnit.addClassName("price-unit");
 
         priceSection.add(priceAmount, priceUnit);
+
         content.add(priceSection);
 
-        // Features list
         VerticalLayout featuresLayout = new VerticalLayout();
         featuresLayout.addClassName("features-list");
         featuresLayout.setPadding(false);
         featuresLayout.setSpacing(false);
-
         for (String feature : plan.features()) {
-            HorizontalLayout featureRow = new HorizontalLayout();
-            featureRow.addClassName("feature-row");
-            featureRow.setAlignItems(Alignment.CENTER);
-            featureRow.setSpacing(true);
-
-            Icon checkIcon = new Icon(VaadinIcon.CHECK_CIRCLE);
-            checkIcon.addClassName("feature-icon");
-
-            Span featureText = new Span(feature);
-            featureText.addClassName("feature-text");
-
-            featureRow.add(checkIcon, featureText);
+            HorizontalLayout featureRow = createFeatureRow(feature);
             featuresLayout.add(featureRow);
         }
 
         content.add(featuresLayout);
 
-        // Buy button
-        Button buyButton = new Button("Get Started", e -> openOrderDialog(plan));
+        Button buyButton = new Button("Buy", e -> openOrderDialog(plan));
         buyButton.addClassName("buy-button");
+        buyButton.addThemeVariants(isPopular ? ButtonVariant.LUMO_PRIMARY : ButtonVariant.LUMO_CONTRAST);
         if (isPopular) {
-            buyButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
             buyButton.addClassName("primary-button");
-        } else {
-            buyButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST);
         }
-
         content.add(buyButton);
 
         card.add(content);
         return card;
     }
 
-    private void openOrderDialog(PlanDto plan) {
-        double tax = plan.price() * 0.12;
-        double grandTotal = plan.price() + tax;
+    private static HorizontalLayout createFeatureRow(String feature) {
+        HorizontalLayout featureRow = new HorizontalLayout();
+        featureRow.addClassName("subscription-feature-row");
+        featureRow.setAlignItems(Alignment.CENTER);
+        featureRow.setSpacing(true);
 
+        Icon checkIcon = new Icon(VaadinIcon.CHECK_CIRCLE);
+        checkIcon.addClassName("subscription-feature-icon");
+
+        Span featureText = new Span(feature);
+        featureText.addClassName("subscription-feature-text");
+
+        featureRow.add(checkIcon, featureText);
+        return featureRow;
+    }
+
+    private void openOrderDialog(PlanDto plan) {
         Dialog dialog = new Dialog();
         dialog.addClassName("order-dialog");
         dialog.setCloseOnOutsideClick(true);
@@ -199,89 +247,152 @@ public class SubscriptionsView extends AppVerticalLayout {
         dialogTitle.addClassName("dialog-title");
         layout.add(dialogTitle);
 
-        // Order details
         Div orderDetails = new Div();
         orderDetails.addClassName("order-details");
-
-        orderDetails.add(createOrderRow("Plan", plan.name()));
-        orderDetails.add(createOrderRow("Price", formatIDR(plan.price())));
-        orderDetails.add(createOrderRow("Tax (12%)", formatIDR(tax)));
-
-        Div totalRow = new Div();
-        totalRow.addClassName("total-row");
-        totalRow.add(new Span("Total: " + formatIDR(grandTotal)));
-        orderDetails.add(totalRow);
-
         layout.add(orderDetails);
 
-        // Action buttons
-        HorizontalLayout buttonLayout = new HorizontalLayout();
-        buttonLayout.addClassName("dialog-buttons");
-        buttonLayout.setWidthFull();
-        buttonLayout.setJustifyContentMode(JustifyContentMode.END);
+        HorizontalLayout buttons = new HorizontalLayout();
+        buttons.setJustifyContentMode(JustifyContentMode.END);
 
-        Button cancelButton = new Button("Cancel", event -> dialog.close());
-        cancelButton.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+        Button cancel = new Button("Cancel", event -> dialog.close());
+        cancel.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
 
-        Button orderButton = new Button("Create Order", event -> {
-            // Simulate dummy payment response
-            PaymentInfo payment = new PaymentInfo("https://midtrans.example.com/pay/order-" + plan.id());
-            UI.getCurrent().getPage().setLocation(payment.redirectUrl());
-            dialog.close();
-        });
-        orderButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        Button order = new Button("Create Order");
+        order.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        order.setEnabled(false); // disable until summary is loaded
 
-        buttonLayout.add(cancelButton, orderButton);
-        layout.add(buttonLayout);
-
+        buttons.add(cancel, order);
+        layout.add(buttons);
         dialog.add(layout);
         dialog.open();
+
+        UI ui = UI.getCurrent();
+        // Call getOrderSummary and update UI
+        subscriptionService.getOrderSummary(plan.id())
+                .map(ApiResponse::getData)
+                .doOnNext(summary -> handleDisplayOrderSummary(plan, summary, ui, orderDetails, order, dialog))
+                .subscribe();
     }
 
-    private Div createOrderRow(String label, String value) {
-        Div row = new Div();
-        row.addClassName("order-row");
+    private void handleDisplayOrderSummary(PlanDto plan, OrderSummary summary, UI ui, Div orderDetails, Button order, Dialog dialog) {
+        if (ui != null) {
+            ui.access(() -> {
+                orderDetails.removeAll();
+                orderDetails.add(createOrderRow("Plan", summary.getPlanName()));
+                orderDetails.add(createOrderRow("Price", summary.getPlanPrice()));
+                orderDetails.add(createOrderRow("Tax (" + summary.getTaxRate() + ")", summary.getTaxTotal()));
 
-        Span labelSpan = new Span(label + ":");
-        labelSpan.addClassName("order-label");
+                Div totalRow = new Div();
+                totalRow.addClassName("total-row");
+                totalRow.add(new Span("Total: " + summary.getGrandTotal()));
+                orderDetails.add(totalRow);
 
-        Span valueSpan = new Span(value);
-        valueSpan.addClassName("order-value");
+                order.setEnabled(true);
+                order.addClickListener(e -> handleCreateOrder(ui, dialog, plan.id()));
 
-        row.add(labelSpan, valueSpan);
-        return row;
-    }
-
-    private Component createSubscriptionSummary() {
-        if (dummySubscriptions.stream().noneMatch(sub ->
-                sub.status().equalsIgnoreCase("active") || sub.status().equalsIgnoreCase("pending"))) {
-            return new Div(); // Return empty div if no active/pending subscriptions
+                ui.push(); // send updates to client
+            });
         }
+    }
 
+    private void handleCreateOrder(UI ui, Dialog dialog, Long planId) {
+        CreateOrderRequest req = CreateOrderRequest.builder().userId(getCurrentUserId()).planId(planId).build();
+
+        subscriptionService.createOrder(req)
+                .map(ApiResponse::getData)
+                .subscribe(payment -> ui.access(() -> {
+                    try {
+                        dialog.close();
+                        if (StringUtils.isBlank(payment.getSnapUrl())) {
+                            showSuccessNotification("Subscription created successfully!");
+                        } else {
+                            ui.getPage().executeJs("window.open($0, '_blank')", payment.getSnapUrl());
+                        }
+                    } catch (Exception ex) {
+                        log.error("Error handling payment response", ex);
+                    }
+                }), error -> ui.access(() -> {
+                    try {
+                        if (error instanceof WebClientLoggingFilter.ApiClientException apiEx) {
+                            show4xxError(apiEx, ui);
+                        } else {
+                            showUnexpectedError(error, ui);
+                        }
+                    } catch (Exception uiEx) {
+                        log.error("Error showing error notification", uiEx);
+                    }
+                }));
+    }
+
+
+    private void showSuccessNotification(String message) {
+        Notification notification = new Notification(message, 3000, Notification.Position.TOP_CENTER);
+        notification.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        notification.open();
+    }
+
+    private void show4xxError(WebClientLoggingFilter.ApiClientException ex, UI ui) {
+        String message = ex.getErrorMessage();
+        if (ex.getHttpStatusCode() == HttpStatus.INTERNAL_SERVER_ERROR.value()) {
+            message = "Something went wrong. Please try again later!";
+        }
+        Notification notification = new Notification(message, 3000, Notification.Position.TOP_CENTER);
+        notification.addThemeVariants(NotificationVariant.LUMO_WARNING);
+        Optional.ofNullable(ui).ifPresent(u -> u.access(notification::open));
+    }
+
+    private void showUnexpectedError(Throwable ex, UI ui) {
+        log.warn("Error getting subscriptions: {}", ex.getMessage());
+        Optional.ofNullable(ui)
+                .ifPresent(it -> it.access(() ->
+                        Notification.show("Something went wrong. Please try again later!", 3000, Notification.Position.TOP_CENTER)
+                                .addThemeVariants(NotificationVariant.LUMO_ERROR)));
+    }
+
+    private Component createSubscriptionSummary(List<SubscriptionDto> subscriptions) {
         VerticalLayout section = new VerticalLayout();
         section.addClassName("subscription-summary");
         section.setWidthFull();
         section.setAlignItems(Alignment.CENTER);
         section.setPadding(true);
 
-        H2 title = new H2("Your Subscriptions");
-        title.addClassName("section-title");
+        section.add();
+
+        HorizontalLayout header = new HorizontalLayout();
+        header.setWidthFull();
+        header.setJustifyContentMode(JustifyContentMode.CENTER);
+        header.setPadding(true);
+        header.setAlignItems(Alignment.CENTER);
+        header.setPadding(true);
+
+        header.add(new H2("Subscriptions"));
+
+        Button refresh = new Button();
+        refresh.setIcon(VaadinIcon.REFRESH.create());
+        refresh.addClickListener(e -> refreshSubscriptionSection(e.getSource().getUI().orElse(null)));
+        header.add(refresh);
+
+        section.add(header);
+
+        if (subscriptions.isEmpty()) {
+            section.add(new Paragraph("You have no active subscriptions."));
+            return section;
+        }
+
 
         VerticalLayout list = new VerticalLayout();
         list.addClassName("subscription-list");
         list.setPadding(false);
         list.setSpacing(true);
         list.setWidthFull();
-        list.setMaxWidth("800px");
 
-        for (SubscriptionDto sub : dummySubscriptions) {
-            if (!sub.status().equalsIgnoreCase("active") && !sub.status().equalsIgnoreCase("pending")) {
-                continue;
-            }
-
-            Card subscriptionCard = new Card();
-            subscriptionCard.addClassName("subscription-card");
-            subscriptionCard.setWidthFull();
+        var filteredSubscriptions = subscriptions.stream()
+                .filter(sub -> sub.status().equalsIgnoreCase(SubscriptionStatus.ACTIVE.name()) || sub.status().equalsIgnoreCase(SubscriptionStatus.PENDING.name()))
+                .toList();
+        for (SubscriptionDto sub : filteredSubscriptions) {
+            Card card = new Card();
+            card.addClassName("subscription-card");
+            card.setWidthFull();
 
             HorizontalLayout row = new HorizontalLayout();
             row.addClassName("subscription-row");
@@ -298,70 +409,109 @@ public class SubscriptionsView extends AppVerticalLayout {
             H4 planName = new H4(sub.planName() + " Plan");
             planName.addClassName("subscription-plan-name");
 
-            // Status badge
-            Div statusBadge = new Div();
-            statusBadge.addClassName("status-badge");
-            statusBadge.addClassName("status-" + sub.status().toLowerCase());
-            statusBadge.setText(sub.status().substring(0, 1).toUpperCase() + sub.status().substring(1));
 
-            // Subscription details
-            VerticalLayout detailsLayout = new VerticalLayout();
-            detailsLayout.addClassName("subscription-details");
-            detailsLayout.setPadding(false);
-            detailsLayout.setSpacing(false);
+            Div badge = new Div();
+            badge.addClassName("status-badge");
+            badge.addClassName("status-" + sub.status().toLowerCase());
+            badge.setText(capitalize(sub.status()));
 
-            if ("active".equalsIgnoreCase(sub.status())) {
-                if (!sub.effectiveDate().isEmpty()) {
-                    Span effectiveDate = new Span("Effective: " + sub.effectiveDate());
-                    effectiveDate.addClassName("subscription-date");
-                    detailsLayout.add(effectiveDate);
-                }
+            VerticalLayout details = new VerticalLayout();
+            details.addClassName("subscription-details");
+            details.setPadding(false);
+            details.setSpacing(false);
 
-                if (!sub.endDate().isEmpty()) {
-                    Span endDate = new Span("Expires: " + sub.endDate());
-                    endDate.addClassName("subscription-date");
-                    detailsLayout.add(endDate);
-                }
-
-                if (!sub.planCycle().isEmpty()) {
-                    Span planCycle = new Span("Billing: " + sub.planCycle().substring(0, 1).toUpperCase() + sub.planCycle().substring(1));
-                    planCycle.addClassName("subscription-cycle");
-                    detailsLayout.add(planCycle);
-                }
+            if (!sub.effectiveDate().isEmpty()) {
+                Span effectiveDate = new Span("Effective: " + sub.effectiveDate());
+                effectiveDate.addClassName("subscription-date");
+                details.add(effectiveDate);
+            }
+            if (!sub.endDate().isEmpty()) {
+                Span endDate = new Span("Expires: " + sub.endDate());
+                endDate.addClassName("subscription-date");
+                details.add(endDate);
+            }
+            if (!sub.planCycle().isEmpty()) {
+                Span planCycle = new Span("Billing: " + capitalize(sub.planCycle()));
+                planCycle.addClassName("subscription-cycle");
+                details.add(planCycle);
             }
 
-            info.add(planName, statusBadge, detailsLayout);
-
+            info.add(planName, badge, details);
             row.add(info);
 
-            if ("pending".equalsIgnoreCase(sub.status())) {
-                Button payButton = new Button("Complete Payment", click -> {
-                    UI.getCurrent().getPage().setLocation(sub.paymentUrl());
-                });
-                payButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-                payButton.addClassName("pay-button");
-                row.add(payButton);
+            if (SubscriptionStatus.PENDING.name().equalsIgnoreCase(sub.status())) {
+                Button payBtn = new Button("Complete Payment");
+                payBtn.addClassName("payBtn-button");
+                payBtn.addClickListener(event -> event.getSource()
+                        .getUI()
+                        .ifPresent(ui -> ui.getPage().executeJs("window.open($0, '_blank')", sub.paymentUrl())));
+                payBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+                row.add(payBtn);
             }
 
-            subscriptionCard.add(row);
-            list.add(subscriptionCard);
+            card.add(row);
+            list.add(card);
         }
 
-        section.add(title, list);
+        section.add(list);
         return section;
     }
 
-    private String formatIDR(double amount) {
-        DecimalFormat df = new DecimalFormat("#,###");
-        df.setGroupingUsed(true);
-        DecimalFormatSymbols symbols = df.getDecimalFormatSymbols();
-        symbols.setGroupingSeparator('.');
-        df.setDecimalFormatSymbols(symbols);
-        return "IDR " + df.format(amount);
+    private Div createOrderRow(String label, String value) {
+        Div row = new Div();
+        row.addClassName("order-row");
+
+        Span labelSpan = new Span(label + ":");
+        labelSpan.addClassName("order-label");
+
+        Span valueSpan = new Span(value);
+        valueSpan.addClassName("order-value");
+
+        row.add(labelSpan, valueSpan);
+        return row;
     }
 
-    // DTOs
-    public record PlanDto(String id, String name, String description, double price, List<String> features) {}
-    public record SubscriptionDto(String planName, String status, String paymentUrl, String effectiveDate, String endDate, String planCycle) {}
-    public record PaymentInfo(String redirectUrl) {}
+    private String capitalize(String str) {
+        if (str == null || str.isEmpty()) return str;
+        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
+    }
+
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        UI.getCurrent().getPage().executeJs("history.replaceState(null, '', window.location.pathname)");
+    }
+
+    // Local DTOs
+    public record PlanDto(Long id, String name, String description, String price, List<String> features,
+                          String planCycle) {
+    }
+
+    public record SubscriptionDto(String planName, String status, String paymentUrl, String effectiveDate,
+                                  String endDate, String planCycle) {
+    }
+
+    private PlanDto toPlanDto(PlanInfo p) {
+        String[] parts = p.getDescription().split("\\|");
+        String summary = parts.length > 0 ? parts[0] : "";
+        List<String> features = parts.length > 1 ? List.of(parts).subList(1, parts.length) : List.of();
+        return new PlanDto(p.getId(), p.getName(), summary, p.getPriceDisplay(), features, p.getValidityDisplay());
+    }
+
+    private Long getCurrentUserId() {
+        return Optional.ofNullable(appUserInfo).map(AppUserInfo::getUserId)
+                .map(UserId::toString)
+                .map(Long::valueOf).orElse(null);
+    }
+
+    private SubscriptionDto toSubscriptionDto(SubscriptionInfo s) {
+        return new SubscriptionDto(s.getPlanName(),
+                s.getStatus().name(),
+                Optional.ofNullable(s.getPaymentUrl()).orElse(""),
+                Formatter.formatDate(s.getEffectiveDate(), Formatter.DD_MMM_YYYY),
+                Formatter.formatDate(s.getExpiryDate(), Formatter.DD_MMM_YYYY),
+                StringUtils.capitalize(s.getPlanCycle())
+        );
+    }
+
+
 }

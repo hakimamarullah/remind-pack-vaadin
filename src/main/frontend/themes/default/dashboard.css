@@ -1,26 +1,13 @@
 /* Dashboard Variables */
 :root {
-    --primary-color: #2563eb;
-    --primary-hover: #1d4ed8;
-    --secondary-color: #64748b;
-    --accent-color: #0ea5e9;
     --success-color: #10b981;
     --warning-color: #f59e0b;
     --error-color: #ef4444;
-    --text-primary: #1e293b;
-    --text-secondary: #64748b;
-    --text-light: #94a3b8;
-    --background-light: #f8fafc;
-    --background-white: #ffffff;
-    --border-color: #e2e8f0;
-    --shadow-minimal: 0 1px 3px 0 rgb(0 0 0 / 0.03);
     --shadow-subtle: 0 2px 4px 0 rgb(0 0 0 / 0.05);
-    --gradient-primary: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
 }
 
 /* Main Dashboard Container */
 .dashboard-main {
-    background: var(--background-light);
     min-height: 100vh;
     display: flex;
     flex-direction: column;

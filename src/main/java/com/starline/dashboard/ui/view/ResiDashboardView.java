@@ -10,12 +10,12 @@ import com.starline.base.api.resi.dto.ResiInfo;
 import com.starline.base.ui.component.AppVerticalLayout;
 import com.starline.base.ui.component.ConfirmDeleteDialog;
 import com.starline.base.ui.component.CountDownTask;
+import com.starline.base.ui.component.ReactiveCountDownTask;
 import com.starline.base.ui.constant.StyleSheet;
 import com.starline.base.ui.view.MainLayout;
 import com.starline.security.AppUserInfo;
 import com.starline.security.CurrentUser;
 import com.starline.security.domain.UserId;
-import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -73,7 +73,7 @@ public class ResiDashboardView extends AppVerticalLayout {
     private static final String ADD_PACKAGE_TEXT = "Add Package";
 
     @Value("${app.max-resi-count:5}")
-    private int MAX_RESI_COUNT;
+    private int maxResiCount;
 
     private final transient AppUserInfo appUserInfo;
     private final transient ResiService resiService;
@@ -84,7 +84,7 @@ public class ResiDashboardView extends AppVerticalLayout {
     private final transient Button btnRefreshList = new Button();
     private final transient Button addResiBtn = new Button(ADD_PACKAGE_TEXT);
 
-    private final transient CountDownTask countDownTask;
+    private final transient CountDownTask simpleCountDownTask;
     private Binder<ResiData> resiDataBinder = new Binder<>();
     private final Grid<ResiInfo> resiGrid = new Grid<>();
     private final transient ResiData resiData = new ResiData();
@@ -95,7 +95,7 @@ public class ResiDashboardView extends AppVerticalLayout {
         this.appUserInfo = currentUser.require();
         this.resiService = resiService;
         this.courierService = courierService;
-        this.countDownTask = new CountDownTask(20);
+        this.simpleCountDownTask = new ReactiveCountDownTask(20);
 
         addClassName("dashboard-main");
         setSizeFull();
@@ -241,7 +241,7 @@ public class ResiDashboardView extends AppVerticalLayout {
 
     private void handleManualRefreshList() {
         refreshResiList();
-        countDownTask.startCountdown(getCurrentUI().orElse(null), () -> {
+        simpleCountDownTask.startCountdown(getCurrentUI().orElse(null), () -> {
             btnRefreshList.setText(null);
             btnRefreshList.setEnabled(true);
         }, counter -> {
@@ -399,8 +399,8 @@ public class ResiDashboardView extends AppVerticalLayout {
         }
 
         int trackingCount = resiGrid.getListDataView().getItemCount();
-        if (trackingCount >= MAX_RESI_COUNT) {
-            String message = String.format("You have reached the maximum number of packages: %s%%nConsider deleting some packages before adding more!", MAX_RESI_COUNT);
+        if (trackingCount >= maxResiCount) {
+            String message = String.format("You have reached the maximum number of packages: %s%%nConsider deleting some packages before adding more!", maxResiCount);
             showErrorNotification(message);
             return;
         }
@@ -625,13 +625,6 @@ public class ResiDashboardView extends AppVerticalLayout {
                 .orElse(null);
     }
 
-    @Override
-    protected void onDetach(DetachEvent detachEvent) {
-        super.onDetach(detachEvent);
-        if (!Objects.isNull(countDownTask)) {
-            countDownTask.shutdown();
-        }
-    }
 
     @Data
     public static class ResiData {

@@ -6,8 +6,8 @@ import com.starline.base.api.users.OTPService;
 import com.starline.base.api.users.ResetPasswordService;
 import com.starline.base.api.users.dto.ResetPasswordRequest;
 import com.starline.base.ui.component.CountDownTask;
+import com.starline.base.ui.component.ReactiveCountDownTask;
 import com.starline.base.ui.constant.StyleSheet;
-import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.Key;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
@@ -169,7 +169,7 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
         otpField.addKeyDownListener(Key.ENTER, e -> e.getSource().getUI().ifPresent(ui -> ui.access(newPasswordField::focus)));
         newPasswordField.addKeyDownListener(Key.ENTER, e -> e.getSource().getUI().ifPresent(ui -> ui.access(confirmPasswordField::focus)));
 
-        countDownTask = new CountDownTask(30);
+        countDownTask = new ReactiveCountDownTask(30);
 
     }
 
@@ -406,14 +406,6 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
             return getUI();
         }
         return Optional.of(ui);
-    }
-
-    @Override
-    protected void onDetach(DetachEvent detachEvent) {
-        super.onDetach(detachEvent);
-        if (!Objects.isNull(countDownTask)) {
-            countDownTask.shutdown();
-        }
     }
 
     @Getter

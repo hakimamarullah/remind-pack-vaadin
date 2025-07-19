@@ -4,26 +4,22 @@
     min-height: 100vh;
 }
 
-.main-content {
-    background: var(--gradient-primary);
-}
-
-/* Hero Section */
-.hero-section {
+/* subscription-hero Section */
+.subscription-hero-section {
     background: var(--gradient-primary);
     color: var(--background-white);
     padding: 2rem;
     text-align: center;
 }
 
-.hero-title {
+.subscription-hero-title {
     font-size: 2.5rem;
     font-weight: 700;
     margin-bottom: 1rem;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.hero-subtitle {
+.subscription-hero-subtitle {
     font-size: 1.25rem;
     opacity: 0.9;
     max-width: 600px;
@@ -32,7 +28,6 @@
 
 /* Plans Section */
 .plans-section {
-    background: var(--background-light);
     padding: 4rem 2rem;
 }
 
@@ -117,8 +112,8 @@
 }
 
 .price-amount {
-    font-size: 2.5rem;
-    font-weight: 700;
+    font-size: 1.5rem;
+    font-weight: 600;
     color: var(--primary-color);
 }
 
@@ -134,22 +129,22 @@
     margin-bottom: 2rem;
 }
 
-.feature-row {
+.subscription-feature-row {
     padding: 0.5rem 0;
     border-bottom: 1px solid var(--border-color);
 }
 
-.feature-row:last-child {
+.subscription-feature-row:last-child {
     border-bottom: none;
 }
 
-.feature-icon {
+.subscription-feature-icon {
     color: var(--primary-color);
     width: 16px;
     height: 16px;
 }
 
-.feature-text {
+.subscription-feature-text {
     color: var(--text-primary);
     font-size: 0.9rem;
 }
@@ -185,10 +180,19 @@
 /* Order Dialog */
 .order-dialog {
     max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    justify-content: center;
 }
 
 .order-content {
     padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
 }
 
 .dialog-title {
@@ -201,6 +205,7 @@
 
 .order-details {
     background: var(--background-light);
+    width: 100%;
     border-radius: 8px;
     padding: 1.5rem;
     margin-bottom: 2rem;
