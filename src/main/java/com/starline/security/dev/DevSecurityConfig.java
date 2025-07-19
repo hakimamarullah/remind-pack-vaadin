@@ -1,6 +1,6 @@
 package com.starline.security.dev;
 
-import com.starline.security.controlcenter.ControlCenterSecurityConfig;
+
 import com.starline.security.prod.ProdSecurityConfig;
 import com.vaadin.flow.router.RouteConfiguration;
 import com.vaadin.flow.server.VaadinServiceInitListener;
@@ -28,7 +28,7 @@ import org.springframework.security.web.SecurityFilterChain;
  * </ul>
  * </p>
  * <p>
- * This configuration is automatically activated when {@link ControlCenterSecurityConfig} is not active. It should
+ * This configuration is automatically activated when {@link ProdSecurityConfig} is not active. It should
  * <strong>not</strong> be used in production environments, as it uses hardcoded credentials and simplified security
  * settings.
  * </p>
@@ -46,7 +46,7 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 @EnableWebSecurity
 @Configuration
-@Import({ VaadinAwareSecurityContextHolderStrategyConfiguration.class })
+@Import({VaadinAwareSecurityContextHolderStrategyConfiguration.class})
 @ConditionalOnMissingBean(ProdSecurityConfig.class)
 class DevSecurityConfig {
 
@@ -69,7 +69,7 @@ class DevSecurityConfig {
 
     @Bean
     VaadinServiceInitListener developmentLoginConfigurer() {
-        return (serviceInitEvent) -> {
+        return serviceInitEvent -> {
             if (serviceInitEvent.getSource().getDeploymentConfiguration().isProductionMode()) {
                 throw new IllegalStateException(
                         "Development profile is active but Vaadin is running in production mode. This indicates a configuration error - development profile should not be used in production.");

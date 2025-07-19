@@ -64,11 +64,6 @@
             <groupId>com.vaadin</groupId>
             <artifactId>vaadin-spring-boot-starter</artifactId>
         </dependency>
-        <dependency>
-            <!-- Remove if you are not going to use Control Center -->
-            <groupId>com.vaadin</groupId>
-            <artifactId>control-center-starter</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>

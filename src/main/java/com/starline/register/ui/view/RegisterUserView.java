@@ -6,7 +6,7 @@ import com.starline.base.api.users.OTPService;
 import com.starline.base.api.users.RegistrationService;
 import com.starline.base.api.users.dto.RegisterUserRequest;
 import com.starline.base.ui.component.CountDownTask;
-import com.vaadin.flow.component.DetachEvent;
+import com.starline.base.ui.component.ReactiveCountDownTask;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -93,6 +93,15 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
         HorizontalLayout otpLayout = new HorizontalLayout(otpField, sendOtpBtn);
         otpLayout.setAlignItems(FlexComponent.Alignment.BASELINE);
 
+        // Set Helper Text
+        phoneField.setRequiredIndicatorVisible(true);
+        phoneField.setHelperText("*This mobile phone will be used as username");
+        phoneField.setPlaceholder("e.g 6285296223972");
+
+        passwordField.setRequiredIndicatorVisible(true);
+        confirmPasswordField.setRequiredIndicatorVisible(true);
+        otpField.setRequiredIndicatorVisible(true);
+
         // Register button
         registerBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         registerBtn.getStyle().set("cursor", "pointer");
@@ -144,7 +153,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
         registerBtn.setEnabled(false);
         registerBtn.addClickListener(e -> handleRegister());
 
-        countDownTask = new CountDownTask(30);
+        countDownTask = new ReactiveCountDownTask(30);
     }
 
     private void handleSendOTP() {
@@ -386,15 +395,6 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
                     sendOtpBtn.setEnabled(false);
                 }
         );
-    }
-
-    @Override
-    protected void onDetach(DetachEvent detachEvent) {
-        super.onDetach(detachEvent);
-        // Clean up scheduler when component is detached
-        if (!Objects.isNull(countDownTask)) {
-            countDownTask.shutdown();
-        }
     }
 
     @Override

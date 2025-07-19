@@ -30,4 +30,10 @@ public class WebClientsConfig {
         return clientBuilder.baseUrl(baseUrl).build();
     }
 
+    @Bean(name = "subscriptionClient")
+    public WebClient subscriptionClient(@Value("${url.svc.subscriptions:http://localhost:8083/resi-svc}") String baseUrl,
+                                WebClient.Builder clientBuilder) {
+        return clientBuilder.baseUrl(baseUrl).build();
+    }
+
 }

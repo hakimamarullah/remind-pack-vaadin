@@ -8,6 +8,9 @@ public class AppVerticalLayout extends VerticalLayout {
 
     public AppVerticalLayout(String title) {
         this.viewToolbar = new ViewToolbar(title);
+        setWidthFull();
+        setPadding(false);
+        setHeightFull();
         add(viewToolbar);
     }
 

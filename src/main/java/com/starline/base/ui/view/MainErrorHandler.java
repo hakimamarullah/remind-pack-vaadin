@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 
 @Configuration
 class MainErrorHandler {
@@ -38,7 +39,11 @@ class MainErrorHandler {
     }
 
     private Notification show4xxError(WebClientLoggingFilter.ApiClientException ex) {
-        var notification = new Notification(StringUtils.capitalize(StringUtils.defaultIfBlank(ex.getErrorMessage(), "System Unavailable")), 3000, Notification.Position.TOP_CENTER);
+        String message = ex.getErrorMessage();
+        if (ex.getHttpStatusCode() == HttpStatus.INTERNAL_SERVER_ERROR.value()) {
+            message = "Something went wrong. Please try again later!";
+        }
+        var notification = new Notification(StringUtils.capitalize(StringUtils.defaultIfBlank(message, "System Unavailable")), 3000, Notification.Position.TOP_CENTER);
         notification.addThemeVariants(NotificationVariant.LUMO_WARNING);
         return notification;
     }
