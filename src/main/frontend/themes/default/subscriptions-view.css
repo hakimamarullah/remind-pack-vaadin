@@ -256,21 +256,162 @@
 .subscription-summary {
     background: var(--background-white);
     padding: 4rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.subscription-list {
-    gap: 1rem;
-}
-
-.subscription-card {
-    border-radius: 12px;
-    box-shadow: var(--shadow-sm);
+.subscription-pay-btn {
+    border-radius: 1rem;
+    background: var(--primary-color);
+    color: var(--background-white);
     transition: all 0.3s ease;
-    border: 1px solid var(--border-color);
+    border: 2px solid var(--primary-color);
+    cursor: pointer;
+    padding: 1rem 1rem;
+}
+
+/* Updated: Responsive Card List */
+.subscription-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+    align-items: center; /* ✨ Change from center */
+    padding: 0;
+    width: 100%;
+}
+
+
+/* Updated: Responsive Card */
+.subscription-card {
+    background: var(--background-white);
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    flex: 1 1 300px;
+    max-width: 500px;
+    min-width: 250px;
+    width: 100%;
+    max-height: min-content;
+    transition: box-shadow 0.3s ease;
 }
 
 .subscription-card:hover {
     box-shadow: var(--shadow-md);
+}
+
+/* Header */
+.subscription-header {
+    background: var(--background-white);
+}
+
+.subscription-plan-name {
+    font-size: 1.5rem !important;
+    font-weight: 600;
+    color: #1a202c;
+    margin: 0;
+}
+
+/* Badges Container */
+.badges-container {
+    gap: 8px;
+}
+
+/* Badge Base Styles - Pill Shape */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* Plan Cycle Badge */
+.badge-cycle {
+    background-color: #f7fafc;
+    color: #4a5568;
+    border: 1px solid #e2e8f0;
+}
+
+/* Status Badges */
+.badge-status {
+    border: 1px solid transparent;
+}
+
+.badge-status-active {
+    background-color: #f0fff4;
+    color: #38a169;
+    border-color: #c6f6d5;
+}
+
+.badge-status-pending {
+    background-color: #fffbeb;
+    color: #d69e2e;
+    border-color: #fed7aa;
+}
+
+.badge-status-cancelled {
+    background-color: #fef2f2;
+    color: #e53e3e;
+    border-color: #fecaca;
+}
+
+.badge-status-expired {
+    background-color: #f7fafc;
+    color: #718096;
+    border-color: #e2e8f0;
+}
+
+/* Details Section - Subtle Blue Background */
+.subscription-details {
+    background-color: var(--subtle-blue);
+    border-color: var(--border-color) !important;
+    padding: 16px 20px;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0.6rem;
+    margin: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+
+/* Detail Rows */
+.detail-row {
+    padding: 6px 0;
+    min-height: 32px;
+}
+
+.detail-row:not(:last-child) {
+    border-bottom: 1px solid #e6f3ff;
+}
+
+.detail-label {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    color: #4a5568;
+}
+
+.detail-value {
+    font-size: 1rem !important;
+    font-weight: 400 !important;
+    color: #2d3748;
+    text-align: right;
+}
+
+.subscription-details-container {
+    background: var(--subtle-blue);
+    border-color: var(--subtle-blue-border);
+    border-radius: 1rem;
 }
 
 .subscription-row {
@@ -279,13 +420,6 @@
 
 .subscription-info {
     flex: 1;
-}
-
-.subscription-plan-name {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 0.75rem;
 }
 
 .status-badge {
@@ -315,10 +449,6 @@
     background-color: #fecaca;
     color: #dc2626;
     border: 1px solid #fca5a5;
-}
-
-.subscription-details {
-    margin-bottom: 0.5rem;
 }
 
 .subscription-date {
@@ -357,6 +487,26 @@
         align-items: center;
     }
 
+    .detail-value-copy-layout {
+        display: flex !important;
+        flex-direction: row-reverse !important;
+    }
+
+    .subscription-card {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+
+    .subscription-plan-name {
+        font-size: 1.2rem !important;
+    }
+
+    .detail-row {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
     .plan-card {
         max-width: 100%;
         width: 100%;
@@ -371,16 +521,6 @@
         transform: translateY(-4px);
     }
 
-    .subscription-row {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-
-    .subscription-info {
-        order: 1;
-        text-align: left;
-    }
 
     .pay-button {
         order: 2;
@@ -398,6 +538,25 @@
         font-size: 2rem;
     }
 
+    .detail-value-copy-layout {
+        display: flex !important;
+        flex-direction: row-reverse !important;
+    }
+
+    .detail-row {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .subscription-plan-name {
+        font-size: 1.1rem !important;
+    }
+
+    .subscription-card {
+        width: 100%;
+    }
+
     .plan-content {
         padding: 1.5rem;
     }
@@ -409,5 +568,4 @@
     .order-content {
         padding: 1.5rem;
     }
-
 }
