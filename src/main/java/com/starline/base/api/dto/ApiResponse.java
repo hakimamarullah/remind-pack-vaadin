@@ -14,6 +14,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Data
 @Builder(toBuilder = true)
@@ -73,9 +74,17 @@ public class ApiResponse<T> implements Serializable {
             return new ArrayList<>();
         }
         Map<String, String> errors = mapper.convertValue(this.data, new TypeReference<>() {});
-        List<FieldError> fieldErrors = new ArrayList<>();
-        errors.forEach((key, value) -> fieldErrors.add(FieldError.builder().name(key).message(value).build()));
-        return fieldErrors;
+
+        return Optional.ofNullable(errors)
+                .map(Map::entrySet)
+                .map(entries -> entries.stream()
+                        .map(entry -> FieldError.builder()
+                        .name(entry.getKey())
+                        .message(entry.getValue())
+                        .build())
+                        .toList()
+                )
+                .orElse(new ArrayList<>());
     }
 
     @Data

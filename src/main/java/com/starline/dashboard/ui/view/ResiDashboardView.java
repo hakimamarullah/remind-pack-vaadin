@@ -24,7 +24,6 @@ import com.vaadin.flow.component.dependency.CssImport;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
 import com.vaadin.flow.component.html.Div;
-import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
@@ -105,8 +104,8 @@ public class ResiDashboardView extends AppVerticalLayout {
         setupComponents();
         setupLayout();
 
-
-        refreshResiList();
+        UI ui = UI.getCurrent();
+        refreshResiList(ui);
 
     }
 
@@ -131,11 +130,8 @@ public class ResiDashboardView extends AppVerticalLayout {
     private void setupLayout() {
         // Main container
         Div mainContainer = new Div();
+        mainContainer.setWidthFull();
         mainContainer.addClassName("dashboard-container");
-
-        // Header section
-        Div headerSection = createHeaderSection();
-
 
         // Add package section
         Div addPackageSection = createAddPackageSection();
@@ -143,19 +139,8 @@ public class ResiDashboardView extends AppVerticalLayout {
         // Package list section
         Div packageListSection = createPackageListSection();
 
-        mainContainer.add(headerSection, addPackageSection, packageListSection);
+        mainContainer.add(packageListSection, addPackageSection);
         add(mainContainer);
-    }
-
-    private Div createHeaderSection() {
-        Div headerSection = new Div();
-        headerSection.addClassName("dashboard-header");
-
-        Paragraph subtitle = new Paragraph("Submit new Airway Bill and get notified");
-        subtitle.addClassName("dashboard-subtitle");
-
-        headerSection.add(subtitle);
-        return headerSection;
     }
 
 
@@ -167,7 +152,7 @@ public class ResiDashboardView extends AppVerticalLayout {
         Div sectionHeader = new Div();
         sectionHeader.addClassName("section-header");
 
-        H3 sectionTitle = new H3("Submit New Tracking Number");
+        Paragraph sectionTitle = new Paragraph("Add AWB");
         sectionTitle.addClassName("section-title");
 
         sectionHeader.add(sectionTitle);
@@ -184,11 +169,15 @@ public class ResiDashboardView extends AppVerticalLayout {
         Div firstRow = new Div();
         firstRow.addClassName("form-row");
         firstRow.add(courierComboBox);
+        courierComboBox.getElement().getThemeList().add("custom-color");
+
 
         // Second row
         Div secondRow = new Div();
         secondRow.addClassName("form-row");
         secondRow.add(trackingNumberField);
+        trackingNumberField.getElement().getThemeList().add("custom-color");
+
 
         // Additional fields container
         additionalFieldContainer.addClassName("additional-fields-container");
@@ -215,9 +204,8 @@ public class ResiDashboardView extends AppVerticalLayout {
         Div sectionHeader = new Div();
         sectionHeader.addClassName("section-header");
 
-        H4 sectionTitle = new H4("Your Packages");
+        H4 sectionTitle = new H4("AWB List");
         sectionTitle.addClassName("section-title");
-
 
         sectionHeader.add(sectionTitle);
 
@@ -225,7 +213,7 @@ public class ResiDashboardView extends AppVerticalLayout {
         Div btnContainer = new Div();
         btnRefreshList.getStyle().set(StyleSheet.CURSOR, StyleSheet.CURSOR_POINTER);
         btnRefreshList.setIcon(VaadinIcon.REFRESH.create());
-        btnRefreshList.addClickListener(it -> handleManualRefreshList());
+        btnRefreshList.addClickListener(it -> handleManualRefreshList(it.getSource().getUI().orElse(null)));
         btnContainer.add(btnRefreshList);
         btnContainer.addClassName("package-list-btn-container");
         btnContainer.setWidthFull();
@@ -239,9 +227,9 @@ public class ResiDashboardView extends AppVerticalLayout {
         return packageListSection;
     }
 
-    private void handleManualRefreshList() {
-        refreshResiList();
-        simpleCountDownTask.startCountdown(getCurrentUI().orElse(null), () -> {
+    private void handleManualRefreshList(UI ui) {
+        refreshResiList(ui);
+        simpleCountDownTask.startCountdown(ui, () -> {
             btnRefreshList.setText(null);
             btnRefreshList.setEnabled(true);
         }, counter -> {
@@ -257,7 +245,6 @@ public class ResiDashboardView extends AppVerticalLayout {
         courierComboBox.setAllowCustomValue(false);
         courierComboBox.setPageSize(5);
         courierComboBox.setItemsPageable(this::getCouriersInfo);
-        courierComboBox.setPageSize(5);
         courierComboBox.setItemLabelGenerator(CourierInfo::getName);
         courierComboBox.addValueChangeListener(it -> handleAdditionalValueInfo(it.getValue()));
         courierComboBox.addCustomValueSetListener(it -> trackingNumberField.setEnabled(false));
@@ -269,6 +256,7 @@ public class ResiDashboardView extends AppVerticalLayout {
         trackingNumberField.setPlaceholder("Enter tracking number");
         trackingNumberField.setPrefixComponent(VaadinIcon.BARCODE.create());
         trackingNumberField.setEnabled(false);
+        trackingNumberField.setWidthFull();
         trackingNumberField.setRequiredIndicatorVisible(true);
         trackingNumberField.setHelperText("Select a courier first to enable this field");
     }
@@ -282,8 +270,7 @@ public class ResiDashboardView extends AppVerticalLayout {
     private void setupAddResiButton() {
         addResiBtn.addClassName("add-package-btn");
         addResiBtn.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_LARGE);
-        addResiBtn.setIcon(VaadinIcon.PLUS.create());
-        addResiBtn.addClickListener(it -> handlerAddResi());
+        addResiBtn.addClickListener(it -> handlerAddResi(it.getSource().getUI().orElse(null)));
     }
 
     private void setupGrid() {
@@ -354,23 +341,24 @@ public class ResiDashboardView extends AppVerticalLayout {
             deleteBtn.addClassName("action-btn-danger");
             deleteBtn.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
             deleteBtn.getElement().setAttribute("title", "Delete Package");
-            deleteBtn.addClickListener(e -> handleDeleteResi(resiInfo));
+            deleteBtn.addClickListener(e -> handleDeleteResi(resiInfo, e.getSource().getUI().orElse(null)));
 
             actions.add(deleteBtn);
             return actions;
         }).setHeader("Actions").setAutoWidth(true).setFlexGrow(0);
     }
 
-    private void handleDeleteResi(ResiInfo resiInfo) {
+    private void handleDeleteResi(ResiInfo resiInfo, UI ui) {
         new ConfirmDeleteDialog<ResiInfo>(() -> {
         })
-                .show(resiInfo, ResiInfo::getTrackingNumber, this::callDeleteResi);
+                .show(resiInfo, ResiInfo::getTrackingNumber, item -> callDeleteResi(item, ui));
     }
 
-    private void callDeleteResi(ResiInfo resiInfo) {
+    private void callDeleteResi(ResiInfo resiInfo, UI ui) {
         try {
+
             resiService.deleteResiByTrackingNumberAndUserId(resiInfo.getTrackingNumber(), getCurrentUserId())
-                    .doOnSuccess(it -> refreshResiList())
+                    .doOnSuccess(it -> refreshResiList(ui))
                     .subscribe();
         } catch (Exception e) {
             log.warn("Failed to delete resi: {}", resiInfo.getTrackingNumber());
@@ -392,7 +380,7 @@ public class ResiDashboardView extends AppVerticalLayout {
         setupResiDataValidator();
     }
 
-    private void handlerAddResi() {
+    private void handlerAddResi(UI ui) {
         if (!resiDataBinder.validate().isOk()) {
             showErrorNotification("Please fix the form errors before submitting");
             return;
@@ -428,25 +416,26 @@ public class ResiDashboardView extends AppVerticalLayout {
         addResiBtn.setIcon(VaadinIcon.SPINNER.create());
 
         try {
+
             var apiResponse = resiService.addResi(payload)
                     .blockOptional(Duration.ofSeconds(40));
-            apiResponse.ifPresent(this::handleSuccessAddResi);
+            apiResponse.ifPresent(res -> handleSuccessAddResi(res, ui));
         } catch (WebClientLoggingFilter.ApiClientException ex) {
-            handleAddResiBadRequestError(ex);
+            handleAddResiBadRequestError(ex, ui);
         }
 
     }
 
-    private void handleSuccessAddResi(ApiResponse<String> apiResponse) {
-        showSuccessNotification(apiResponse.getData());
+    private void handleSuccessAddResi(ApiResponse<String> apiResponse, UI ui) {
+        showSuccessNotification(apiResponse.getMessage());
         resetForm();
         setFormEnabled(true);
-        refreshResiList();
+        refreshResiList(ui);
     }
 
-    private void handleAddResiBadRequestError(Throwable throwable) {
+    private void handleAddResiBadRequestError(Throwable throwable, UI ui) {
         log.error("❌ Failed to add resi: {}", throwable.getMessage(), throwable);
-        getUI().ifPresent(ui -> ui.access(() -> {
+        Optional.ofNullable(ui).ifPresent(it -> it.access(() -> {
             setFormEnabled(true);
             addResiBtn.setText(ADD_PACKAGE_TEXT);
             addResiBtn.setIcon(VaadinIcon.PLUS.create());
@@ -456,7 +445,7 @@ public class ResiDashboardView extends AppVerticalLayout {
                     case HttpStatus.BAD_REQUEST:
                         clearFieldErrors();
                         ex.getFieldErrors().forEach(this::showFieldError);
-                        showErrorNotification("Please fix the form errors and try again");
+                        showErrorNotification(Optional.ofNullable(ex.getErrorMessage()).orElse("Please fix the form errors before submitting"));
                         break;
                     case HttpStatus.CONFLICT, NOT_FOUND:
                         showErrorNotification(ex.getErrorMessage());
@@ -581,7 +570,7 @@ public class ResiDashboardView extends AppVerticalLayout {
         notification.addThemeVariants(NotificationVariant.LUMO_WARNING);
     }
 
-    private void refreshResiList() {
+    private void refreshResiList(UI ui) {
 
         if (Objects.isNull(appUserInfo)) {
             log.warn("Current User is null. Cannot refresh resi list");
@@ -589,33 +578,25 @@ public class ResiDashboardView extends AppVerticalLayout {
         }
 
         resiService.getResiByUserId(getCurrentUserId())
-                .subscribe(this::handleSuccessFetchResi, this::handleErrorFetchResi);
+                .subscribe(res -> handleSuccessFetchResi(res, ui), err -> handleErrorFetchResi(err, ui));
     }
 
-    private void handleSuccessFetchResi(ApiResponse<List<ResiInfo>> apiResponse) {
+    private void handleSuccessFetchResi(ApiResponse<List<ResiInfo>> apiResponse, UI ui) {
         List<ResiInfo> resiInfoList = apiResponse.getData();
-        getCurrentUI().ifPresent(it -> it.access(() -> {
+        Optional.ofNullable(ui).ifPresent(it -> it.access(() -> {
             resiGrid.setItems(resiInfoList);
             it.push();
         }));
     }
 
-    private void handleErrorFetchResi(Throwable throwable) {
+    private void handleErrorFetchResi(Throwable throwable, UI ui) {
         log.warn("Failed to fetch resi list: {}", throwable.getMessage());
-        getCurrentUI().ifPresent(it -> it.access(() -> {
+        Optional.ofNullable(ui).ifPresent(it -> it.access(() -> {
             showErrorNotification("Failed to fetch resi list");
             it.push();
         }));
     }
 
-    private Optional<UI> getCurrentUI() {
-        UI ui = UI.getCurrent();
-        if (Objects.isNull(ui)) {
-            log.warn("Current UI is null. Trying to get from getUI() instead");
-            return getUI();
-        }
-        return Optional.of(ui);
-    }
 
     private Long getCurrentUserId() {
         return Optional.ofNullable(appUserInfo)
