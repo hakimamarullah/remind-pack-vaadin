@@ -43,6 +43,7 @@ import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.PermitAll;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.aot.hint.annotation.RegisterReflection;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.http.HttpStatus;
 
@@ -56,6 +57,10 @@ import java.util.Optional;
 @CssImport("./themes/default/subscriptions-view.css")
 @PermitAll
 @Slf4j
+@RegisterReflectionForBinding({
+        SubscriptionsView.PlanDto.class,
+        SubscriptionsView.SubscriptionDto.class
+})
 public class SubscriptionsView extends AppVerticalLayout implements BeforeEnterObserver {
 
     private final transient SubscriptionService subscriptionService;
@@ -530,12 +535,12 @@ public class SubscriptionsView extends AppVerticalLayout implements BeforeEnterO
     }
 
     // Local DTOs
-    @RegisterReflectionForBinding(PlanDto.class)
+    @RegisterReflection
     public record PlanDto(Long id, String name, String description, String price, List<String> features,
                           String planCycle) {
     }
 
-    @RegisterReflectionForBinding(SubscriptionDto.class)
+    @RegisterReflection
     public record SubscriptionDto(String subscriptionId, String planName, String status, String paymentUrl,
                                   String effectiveDate,
                                   String endDate, String planCycle) {

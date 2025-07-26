@@ -4,13 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
+import org.springframework.aot.hint.annotation.RegisterReflection;
 
 @Data
 @Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
-@RegisterReflectionForBinding(PaymentInfo.class)
+@RegisterReflection
 public class PaymentInfo {
 
     private String snapUrl;

@@ -1,11 +1,11 @@
 package com.starline.base.api.subscriptions.dto.plan;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
+import org.springframework.aot.hint.annotation.RegisterReflection;
 
 import java.util.Objects;
 
-@RegisterReflectionForBinding(PlanValidity.class)
+@RegisterReflection
 public enum PlanValidity {
 
     WEEKLY, MONTHLY, YEARLY;

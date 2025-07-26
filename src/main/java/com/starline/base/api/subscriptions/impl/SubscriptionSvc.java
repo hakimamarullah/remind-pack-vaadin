@@ -9,6 +9,7 @@ import com.starline.base.api.subscriptions.dto.plan.PlanInfo;
 import com.starline.base.api.subscriptions.dto.subscriptions.HasActiveSubscription;
 import com.starline.base.api.subscriptions.dto.subscriptions.SubscriptionInfo;
 import lombok.RequiredArgsConstructor;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,14 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@RegisterReflectionForBinding({
+        PaymentInfo.class,
+        OrderSummary.class,
+        PlanInfo.class,
+        SubscriptionInfo.class,
+        HasActiveSubscription.class,
+        CreateOrderRequest.class
+})
 public class SubscriptionSvc implements SubscriptionService {
 
     @Qualifier("subscriptionClient")

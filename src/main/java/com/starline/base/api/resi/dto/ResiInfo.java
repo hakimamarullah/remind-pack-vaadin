@@ -1,14 +1,18 @@
 package com.starline.base.api.resi.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
+import lombok.NoArgsConstructor;
+import org.springframework.aot.hint.annotation.RegisterReflection;
 
 import java.time.LocalDateTime;
 
 
 @Data
-@RegisterReflectionForBinding(ResiInfo.class)
+@AllArgsConstructor
+@NoArgsConstructor
+@RegisterReflection
 public class ResiInfo {
 
     private String trackingNumber;

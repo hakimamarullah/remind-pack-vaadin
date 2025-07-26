@@ -280,6 +280,7 @@
                                 <arg>-J-XX:MaxRAMPercentage=98.0</arg>
                                 <arg>-H:+ReportExceptionStackTraces</arg>
                                 <arg>-H:IncludeResources=application.yml</arg>
+                                <arg>-H:IncludeResources=META-INF/maven/com.vaadin/hilla/pom.properties</arg>
                                 <arg>-H:+GenerateBuildArtifactsFile</arg>
                                 <arg>-march=compatibility</arg>
                                 <arg>-H:+AddAllCharsets</arg>

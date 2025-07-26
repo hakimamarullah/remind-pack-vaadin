@@ -1,6 +1,6 @@
 package com.starline.security;
 
-import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
+import org.springframework.aot.hint.annotation.RegisterReflection;
 
 /**
  * Constants for application role names used throughout the security system.
@@ -38,7 +38,7 @@ import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
  *
  * @see org.springframework.security.access.prepost.PreAuthorize
  */
-@RegisterReflectionForBinding(AppRoles.class)
+@RegisterReflection
 public final class AppRoles {
 
     /**
