@@ -1,0 +1,12 @@
+.idea
+docker
+scripts
+target
+build_prod.sh
+LICENSE.md
+eclipse-formatter.xml
+*.iml
+*.generated.*
+.github
+.git
+node_modules

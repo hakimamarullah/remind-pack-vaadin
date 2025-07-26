@@ -38,6 +38,7 @@ import jakarta.annotation.security.PermitAll;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 
@@ -410,6 +411,7 @@ public class ForgotPasswordView extends Main implements BeforeEnterObserver {
 
     @Getter
     @Setter
+    @RegisterReflectionForBinding(PasswordReset.class)
     public static class PasswordReset {
         private String phone;
         private String otp;

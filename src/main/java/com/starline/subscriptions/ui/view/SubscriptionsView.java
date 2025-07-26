@@ -43,6 +43,7 @@ import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.PermitAll;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.http.HttpStatus;
 
 import java.util.Collections;
@@ -529,10 +530,12 @@ public class SubscriptionsView extends AppVerticalLayout implements BeforeEnterO
     }
 
     // Local DTOs
+    @RegisterReflectionForBinding(PlanDto.class)
     public record PlanDto(Long id, String name, String description, String price, List<String> features,
                           String planCycle) {
     }
 
+    @RegisterReflectionForBinding(SubscriptionDto.class)
     public record SubscriptionDto(String subscriptionId, String planName, String status, String paymentUrl,
                                   String effectiveDate,
                                   String endDate, String planCycle) {

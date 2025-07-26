@@ -3,6 +3,7 @@ package com.starline.security;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
@@ -41,6 +42,7 @@ import static java.util.Objects.requireNonNull;
  * @see AppUserInfo The application's user information model
  * @see AppUserPrincipal The principal interface that provides access to user information
  */
+@RegisterReflectionForBinding(CurrentUser.class)
 public class CurrentUser {
 
     private static final Logger log = LoggerFactory.getLogger(CurrentUser.class);

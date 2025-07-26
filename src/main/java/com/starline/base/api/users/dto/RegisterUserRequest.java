@@ -4,9 +4,11 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 
 @Data
 @Builder(toBuilder = true)
+@RegisterReflectionForBinding(RegisterUserRequest.class)
 public class RegisterUserRequest {
 
     @NotBlank(message = "Please Provide Valid Phone Number")

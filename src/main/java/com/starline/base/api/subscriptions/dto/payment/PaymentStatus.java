@@ -1,9 +1,11 @@
 package com.starline.base.api.subscriptions.dto.payment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 
 import java.util.Objects;
 
+@RegisterReflectionForBinding(PaymentStatus.class)
 public enum PaymentStatus {
 
     PENDING, SUCCESS, FAILED;

@@ -34,6 +34,7 @@ import com.vaadin.flow.spring.security.AuthenticationContext;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.http.HttpStatus;
 
 import java.time.Duration;
@@ -406,6 +407,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
 
 
     @Data
+    @RegisterReflectionForBinding(UserRegistration.class)
     public static class UserRegistration {
         private String phone;
         private String password;

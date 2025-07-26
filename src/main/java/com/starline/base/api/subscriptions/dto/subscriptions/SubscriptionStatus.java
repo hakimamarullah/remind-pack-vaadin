@@ -1,9 +1,11 @@
 package com.starline.base.api.subscriptions.dto.subscriptions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 
 import java.util.Objects;
 
+@RegisterReflectionForBinding(SubscriptionStatus.class)
 public enum SubscriptionStatus {
 
     PENDING, ACTIVE, CANCELLED, EXPIRED;
