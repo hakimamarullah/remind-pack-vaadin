@@ -2,6 +2,7 @@ package com.starline;
 
 import com.vaadin.flow.component.page.AppShellConfigurator;
 import com.vaadin.flow.component.page.Push;
+import com.vaadin.flow.server.AppShellSettings;
 import com.vaadin.flow.shared.ui.Transport;
 import com.vaadin.flow.theme.Theme;
 import org.springframework.boot.SpringApplication;
@@ -26,4 +27,9 @@ public class Application implements AppShellConfigurator {
         SpringApplication.run(Application.class, args);
     }
 
+    @Override
+    public void configurePage(AppShellSettings settings) {
+       settings.addMetaTag("description", "RemindPack helps you track and manage all your subscriptions with smart reminders. Never miss a renewal again.");
+       settings.addMetaTag("keywords", "package tracker, reminder app, remindpack, subscription manager, remind me, remind paket, awb tracking");
+    }
 }
