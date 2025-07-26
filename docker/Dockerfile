@@ -11,7 +11,7 @@ RUN chmod +x ./mvnw
 
 # Copy source code
 COPY src/ ./src/
-COPY package.json package-lock.json tsconfig.json type.d.ts vite.config.ts ./
+COPY package.json package-lock.json tsconfig.json types.d.ts vite.config.ts ./
 RUN ./mvnw clean install -Pproduction -Pnative -DskipTests
 
 
