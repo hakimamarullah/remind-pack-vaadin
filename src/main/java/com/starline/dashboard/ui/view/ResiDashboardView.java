@@ -43,6 +43,8 @@ import jakarta.annotation.security.PermitAll;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aot.hint.annotation.RegisterReflection;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -63,6 +65,12 @@ import java.util.function.Function;
 @CssImport("./themes/default/dashboard.css")
 @PermitAll
 @Slf4j
+@RegisterReflectionForBinding({
+        ResiInfo.class,
+        AppUserInfo.class,
+        CourierInfo.class,
+        ResiDashboardView.ResiData.class
+})
 public class ResiDashboardView extends AppVerticalLayout {
 
     private static final String FORM_FIELD_CLASS_NAME = "form-field";
@@ -608,6 +616,7 @@ public class ResiDashboardView extends AppVerticalLayout {
 
 
     @Data
+    @RegisterReflection
     public static class ResiData {
         private String trackingNumber;
         private String additionalValue;

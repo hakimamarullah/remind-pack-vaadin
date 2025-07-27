@@ -10,6 +10,7 @@ import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -25,6 +26,7 @@ import java.util.Optional;
 @Getter
 @Setter
 @JsonIgnoreProperties({"customUpdateBy", "customUpdateDate", "customCreateBy", "customCreateDate"})
+@RegisterReflectionForBinding(BaseEntity.class)
 public class BaseEntity implements Serializable {
 
 

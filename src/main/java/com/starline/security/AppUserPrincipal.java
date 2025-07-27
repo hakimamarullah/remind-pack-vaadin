@@ -1,5 +1,6 @@
 package com.starline.security;
 
+import org.springframework.aot.hint.annotation.RegisterReflection;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.security.Principal;
@@ -16,6 +17,7 @@ import java.util.Collection;
  * access user information with a consistent pattern: {@code authentication.principal.appUser.userId}
  * </p>
  */
+@RegisterReflection
 public interface AppUserPrincipal extends Principal {
 
     /**

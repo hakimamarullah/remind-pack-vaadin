@@ -5,6 +5,7 @@ import com.starline.base.api.resi.ResiService;
 import com.starline.base.api.resi.dto.AddResiRequest;
 import com.starline.base.api.resi.dto.ResiInfo;
 import lombok.RequiredArgsConstructor;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,10 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@RegisterReflectionForBinding({
+        ResiInfo.class,
+        AddResiRequest.class
+})
 public class ResiSvc implements ResiService {
 
     @Qualifier("resiClient")

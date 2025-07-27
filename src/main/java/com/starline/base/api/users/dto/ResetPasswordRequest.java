@@ -4,9 +4,11 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 
 @Data
 @Builder
+@RegisterReflectionForBinding(ResetPasswordRequest.class)
 public class ResetPasswordRequest {
 
     @NotBlank(message = "Please Provide Valid Phone Number")

@@ -21,6 +21,7 @@ package com.starline.security;
 
 import com.starline.security.domain.UserId;
 import org.jspecify.annotations.Nullable;
+import org.springframework.aot.hint.annotation.RegisterReflection;
 
 import java.time.ZoneId;
 import java.util.Locale;
@@ -39,6 +40,7 @@ import java.util.Locale;
  * contain information about the user's roles or authorities.
  * </p>
  */
+@RegisterReflection
 public interface AppUserInfo {
 
     /**

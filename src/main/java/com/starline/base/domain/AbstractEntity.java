@@ -2,9 +2,11 @@ package com.starline.base.domain;
 
 import jakarta.persistence.MappedSuperclass;
 import org.jspecify.annotations.Nullable;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.data.util.ProxyUtils;
 
 @MappedSuperclass
+@RegisterReflectionForBinding(AbstractEntity.class)
 public abstract class AbstractEntity<ID> {
 
     public abstract @Nullable ID getId();

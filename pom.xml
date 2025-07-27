@@ -15,12 +15,13 @@
         <vaadin.version>24.8.3</vaadin.version>
         <archunit.version>1.4.1</archunit.version>
         <lombok.version>1.18.38</lombok.version>
+        <native.maven.plugin.version>0.11.0</native.maven.plugin.version>
     </properties>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.3</version>
+        <version>3.5.4</version>
         <relativePath/>
     </parent>
 
@@ -239,6 +240,63 @@
 <!--                            <forceProductionBuild>true</forceProductionBuild>-->
                             <!-- To have reproducible build by running 'npm ci' -->
                             <optimizeBundle>false</optimizeBundle>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.graalvm.buildtools</groupId>
+                        <artifactId>native-maven-plugin</artifactId>
+                        <version>${native.maven.plugin.version}</version>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <id>build-native</id>
+                                <goals>
+                                    <goal>compile-no-fork</goal>
+                                </goals>
+                                <phase>package</phase>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <metadataRepository>
+                                <enabled>true</enabled>
+                            </metadataRepository>
+                            <agent>
+                                <enabled>true</enabled>
+                            </agent>
+                            <mainClass>com.starline.Application</mainClass>
+                            <buildArgs>
+                                <arg>--verbose</arg>
+                                <arg>--enable-url-protocols=jar,https,http</arg>
+                                <arg>--enable-native-access=ALL-UNNAMED</arg>
+                                <arg>-Ob</arg>
+                                <arg>--no-fallback</arg>
+                                <arg>-J-XX:MaxRAMPercentage=98.0</arg>
+                                <arg>-H:+ReportExceptionStackTraces</arg>
+                                <arg>-H:IncludeResources=application.yml</arg>
+                                <arg>-H:IncludeResources=META-INF/maven/com.vaadin/hilla/pom.properties</arg>
+                                <arg>-H:+GenerateBuildArtifactsFile</arg>
+                                <arg>-march=compatibility</arg>
+                                <arg>-H:+AddAllCharsets</arg>
+                                <arg>--add-opens java.base/java.lang=ALL-UNNAMED</arg>
+                                <arg>--add-opens java.base/java.util=ALL-UNNAMED</arg>
+                                <arg>--add-opens java.base/java.time=ALL-UNNAMED</arg>
+                                <arg>--add-opens java.base/java.io=ALL-UNNAMED</arg>
+                                <arg>-Duser.timezone=GMT+7</arg>
+                            </buildArgs>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <configuration>
+                            <classifier>exec</classifier>
                         </configuration>
                     </plugin>
                 </plugins>

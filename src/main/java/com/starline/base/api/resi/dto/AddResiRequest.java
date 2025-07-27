@@ -6,9 +6,11 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
+import org.springframework.aot.hint.annotation.RegisterReflection;
 
 @Data
 @Builder(toBuilder = true)
+@RegisterReflection
 public class AddResiRequest {
 
     @NotBlank(message = "trackingNumber is required")

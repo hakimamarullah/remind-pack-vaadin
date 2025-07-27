@@ -7,6 +7,7 @@ import com.starline.base.api.resi.dto.CourierInfo;
 import com.starline.base.api.utils.ClientRequestUtils;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
@@ -20,6 +21,12 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@RegisterReflectionForBinding({
+        ApiResponse.class,
+        Page.class,
+        PageWrapper.class,
+        CourierInfo.class
+})
 public class CourierSvc implements CourierService {
 
     @Qualifier("resiClient")

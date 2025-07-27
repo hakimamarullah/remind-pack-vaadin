@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.aot.hint.annotation.RegisterReflection;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -20,6 +21,7 @@ import java.util.Optional;
 @Builder(toBuilder = true)
 @AllArgsConstructor
 @NoArgsConstructor
+@RegisterReflection
 public class ApiResponse<T> implements Serializable {
 
     public static final String SUCCESS = "Success";

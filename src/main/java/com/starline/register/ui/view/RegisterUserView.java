@@ -34,6 +34,8 @@ import com.vaadin.flow.spring.security.AuthenticationContext;
 import com.vaadin.flow.theme.lumo.LumoUtility;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.aot.hint.annotation.RegisterReflection;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.http.HttpStatus;
 
 import java.time.Duration;
@@ -45,6 +47,9 @@ import java.util.Optional;
 @PageTitle("Register")
 @AnonymousAllowed
 @Slf4j
+@RegisterReflectionForBinding({
+        RegisterUserView.UserRegistration.class
+})
 public class RegisterUserView extends Main implements BeforeEnterObserver {
 
     private final transient RegistrationService registrationService;
@@ -406,6 +411,7 @@ public class RegisterUserView extends Main implements BeforeEnterObserver {
 
 
     @Data
+    @RegisterReflection
     public static class UserRegistration {
         private String phone;
         private String password;

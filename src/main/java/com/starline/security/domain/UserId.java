@@ -1,5 +1,7 @@
 package com.starline.security.domain;
 
+import org.springframework.aot.hint.annotation.RegisterReflection;
+
 import java.io.Serializable;
 import java.util.Objects;
 
@@ -33,6 +35,7 @@ import static java.util.Objects.requireNonNull;
  * <!-- spotless:on -->
  * </p>
  */
+@RegisterReflection
 public final class UserId implements Serializable {
 
     private final String userId;

@@ -13,6 +13,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.Comment;
+import org.springframework.aot.hint.annotation.RegisterReflection;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -24,6 +25,7 @@ import java.util.HashSet;
 @Setter
 @Entity
 @Table(name = "USERS")
+@RegisterReflection
 public class ApplicationUser extends BaseEntity implements AppUserPrincipal, UserDetails {
 
     @Id

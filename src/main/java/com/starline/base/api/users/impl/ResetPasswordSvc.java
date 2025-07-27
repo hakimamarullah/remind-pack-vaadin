@@ -4,6 +4,7 @@ import com.starline.base.api.dto.ApiResponse;
 import com.starline.base.api.users.ResetPasswordService;
 import com.starline.base.api.users.dto.ResetPasswordRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,9 @@ import reactor.core.publisher.Mono;
 
 @Service
 @RequiredArgsConstructor
+@RegisterReflectionForBinding({
+        ResetPasswordRequest.class
+})
 public class ResetPasswordSvc implements ResetPasswordService {
 
     @Qualifier("userClient")
